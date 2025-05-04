@@ -1,0 +1,16 @@
+# Node.js dependencies
+node_modules/
+
+# Build output directory
+dist/
+
+# Optional: Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Optional: OS generated files
+.DS_Store
+Thumbs.db

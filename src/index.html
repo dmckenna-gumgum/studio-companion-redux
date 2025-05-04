@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Creative Studio Companion</title>
+    <!-- <link rel="stylesheet" href="css/styles.css"> -->
+    <style>
+        /* For diagnostic purposes */
+        sp-button {
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <script src="main.bundle.js"></script>
+    <sp-theme scale="medium" color="dark" theme="spectrum" dir="ltr" style="background-color: var(--spectrum-gray-500);"> 
+        
+        <div class="container">
+            <div class="options-group">
+                <h3>Target Containers</h3>
+                <div class="checkbox-cluster">
+                    <label class="option-label">
+                        <input type="checkbox" id="chkDesktop" value=":dt"> Desktop (:dt)
+                    </label>
+                    <label class="option-label">
+                        <input type="checkbox" id="chkMobile" value=":mb"> Mobile (:mb)
+                    </label>
+                    <label class="option-label">
+                        <input type="checkbox" id="chkTile" value="-tile"> Tile (-tile)
+                    </label>
+                    <small class="option-note">(Leave all unchecked to target all)</small>
+                </div>
+                <h3>Scaling</h3>
+                <div class="input-cluster">
+                    <label for="numScalePercent" class="option-label">Scale By:</label>
+                    <input type="number" id="numScalePercent" value="100" min="1" max="10000" step="1" class="scale-input"> %
+                </div>
+                <hr class="separator">
+            </div>
+            <div class="action-group">
+                <h2>Selecting & Linking</h2>
+                <div class="button-cluster">    
+                    <sp-button id="btnSelect">Select Layers by Name</sp-button>
+                    <sp-button id="btnLink">Link Layer by Name</sp-button>
+                    <sp-button id="btnUnlink">Unlink Layer by Name</sp-button>
+                </div>
+            </div>
+            <div class="action-group">
+                <h2>Asset Actions</h2>
+                <div class="button-cluster">    
+                    <sp-button id="btnDuplicate">Propagate Asset(s)</sp-button>    
+                    <sp-button id="btnMissing">Fill Missing Asset(s)</sp-button>
+                    <sp-button id="btnDelete">Purge Asset(s)</sp-button>
+                    <sp-button id="btnScale">Scale Asset(s)</sp-button>
+                </div>
+            </div>
+            <sp-action-bar open>
+                2 selected
+                <sp-action-button slot="buttons" label="Edit">
+                    <sp-icon-edit slot="icon"></sp-icon-edit>
+                </sp-action-button>
+                <sp-action-button slot="buttons" label="More">
+                    <sp-icon-more slot="icon"></sp-icon-more>
+                </sp-action-button>
+            </sp-action-bar>
+            <p id="feedback" class="feedback-area">Loading...</p>
+        </div>  
+    </sp-theme>
+</body>
+
+</html>

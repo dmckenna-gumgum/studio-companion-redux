@@ -1,0 +1,51 @@
+{
+  "name": "studio-companion-redux",
+  "id": "studio-companion-redux",
+  "version": "2.0.0",
+  "main": "index.html",
+  "manifestVersion": 5,
+  "featureFlags": {
+    "enableSWCSupport": true
+  },
+  "entrypoints": [
+    {
+      "type": "panel",
+      "id": "mainPanel",
+      "label": {
+        "default": "Studio Companion Redux"
+      },
+      "minimumSize": {
+        "width": 300,
+        "height": 300
+      },
+      "maximumSize": {
+        "width": 2000,
+        "height": 2000
+      },
+      "preferredDockedSize": {
+        "width": 400,
+        "height": 300
+      },
+      "preferredFloatingSize": {
+        "width": 400,
+        "height": 300
+      }
+    }
+  ],
+  "requiredPermissions": {
+    "localFileSystem": "request",
+    "network": {
+        "domains": ["https://*"]
+    }
+  },
+  "host": [
+    {
+      "app": "PS",
+      "minVersion": "24.4.0"
+    },
+    {
+      "app": "ID",
+      "minVersion": "18.0"
+    }
+  ]
+}
