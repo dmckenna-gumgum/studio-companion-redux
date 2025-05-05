@@ -1,12 +1,21 @@
+// Import CSS
+import './css/styles.css';
+
+// Import Spectrum components
 import '@spectrum-web-components/theme/sp-theme.js';
 import '@spectrum-web-components/theme/src/themes.js';
 import '@swc-uxp-wrappers/utils';
 import '@swc-uxp-wrappers/button/sp-button.js';
+import '@swc-uxp-wrappers/button-group/sp-button-group.js';
 import '@swc-uxp-wrappers/checkbox/sp-checkbox.js';
 import '@swc-uxp-wrappers/action-bar/sp-action-bar.js';
+import '@swc-uxp-wrappers/action-button/sp-action-button.js';
 import '@swc-uxp-wrappers/sidenav/sp-sidenav.js';
 import '@swc-uxp-wrappers/sidenav/sp-sidenav-heading.js';
 import '@swc-uxp-wrappers/sidenav/sp-sidenav-item.js';
+import '@swc-uxp-wrappers/switch/sp-switch.js';
+import '@swc-uxp-wrappers/field-group/sp-field-group.js';
+import '@swc-uxp-wrappers/field-label/sp-field-label.js';
 
 // Core Actions
 import { selectLayersByName } from "./js/actions/selectLayersByName.js";
@@ -16,10 +25,126 @@ import { deleteLayersByName } from "./js/actions/deleteLayersByName.js";
 import { propagateLayers } from "./js/actions/propagateLayers.js";
 
 // UXP modules
-const { core } = require("photoshop");
+const { app, core, action, constants } = require("photoshop");
 
+const tag = 'sp-icon-alert';
+if (!customElements.get(tag)) {
+  console.error(`${tag} is NOT registered`);
+} else {
+  console.log(`${tag} is registered`);
+}
+
+let actionBar;
+let currentSelection = new Set();
+let selectionPoll;
 const checkBoxElements = [];
 let feedbackElement;
+let viableSelection = true;
+let editorMenu;
+let lastIds = null;
+
+const setsAreEqual = (a, b) =>
+  (a === b) ||
+  (
+    a instanceof Set &&
+    b instanceof Set &&
+    a.size === b.size &&
+    [...a].every(item => b.has(item))
+  );
+
+function onSelect() {
+  // grab the _current_ selection array
+  const current = app.activeDocument.activeLayers;
+  //if selection is empty, stop polling and hide action bar
+  if(current.length === 0) {
+    stopSelectionPoll();
+    toggleActionBar();
+    viableSelectionCheck(false);
+    return;
+  }  
+  //create a set of the current selection ids
+  const currentIds = new Set(current.map(l => l.id));
+  //if selection is the same as last selection, do nothing further
+  if(setsAreEqual(currentIds, currentSelection)) {
+    console.log('Selection is the same as last selection');
+    return;
+  }    
+  //check if selection is mixed types
+  const mixedTypes = current.some(item => item.kind !== current[0].kind);
+  // update our snapshot
+  currentSelection = currentIds;
+  //adjust UI to respond to selection
+  viableSelectionCheck(mixedTypes);
+  startSelectionPoll();
+  toggleActionBar(mixedTypes, currentSelection);
+}
+
+function startSelectionPoll() {
+  if(!selectionPoll) {
+    console.log('Starting selection poll...');
+    selectionPoll = setInterval(onSelect, 200);
+  }
+}
+
+function stopSelectionPoll() {
+  console.log('Stopping selection poll...');
+  clearInterval(selectionPoll);
+  selectionPoll = null;
+}
+
+function viableSelectionCheck(mixedTypes) {
+  if(!mixedTypes && !viableSelection) {
+    viableSelection = !mixedTypes;
+    //disable buttons
+    toggleButtonDisable();
+  } else if(mixedTypes && viableSelection) {
+    viableSelection = !mixedTypes;
+    //enable buttons
+    toggleButtonDisable();
+  }
+}
+
+function toggleButtonDisable() {
+  editorMenu.querySelectorAll('sp-button').forEach(button => {
+    console.log('setting buttons to disabled:', !viableSelection);
+    if (!viableSelection) {
+      button.setAttribute('disabled', ''); // adds the flag
+      button.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+      button.style.color = 'rgba(255, 255, 255, 0.1)';
+    } else {
+      button.removeAttribute('disabled');  // clears the flag
+      button.removeAttribute('style');
+    }
+  });
+}
+
+function toggleActionBar(mixedTypes = false, selection = null) {
+  //if selection is null, hide action bar
+  if(selection === null) {
+    console.log('hide action bar');
+    actionBar.removeAttribute('open');
+    return;
+  }
+
+  //otherwise open the action bar, and then show the feedback message based on the selection and whether it is mixed types or not
+  console.log('show action bar');
+  actionBar.setAttribute('open', true);
+  if(mixedTypes) {
+    feedbackElement.textContent = `You've currently selected a mix of artboards and layers. Performing bulk actions on a mix of artboards and layers is not supported`;
+    actionBar.removeAttribute('emphasized');
+    actionBar.querySelectorAll('sp-action-button').forEach(button => {
+      button.setAttribute('disabled', true);
+      button.style.color = 'rgba(255, 255, 255, 0.1)';
+    });
+  } else {
+    feedbackElement.textContent = `${selection.size} layers selected`;
+    actionBar.setAttribute('emphasized', true);
+    actionBar.querySelectorAll('sp-action-button').forEach(button => {
+      button.removeAttribute('disabled');  // clears the flag
+      button.removeAttribute('style');
+    });
+  }
+}
 
 // --- Helper Function to Get Options ---
 function getValidTypes() {
@@ -27,22 +152,25 @@ function getValidTypes() {
     const anyChecked = checkBoxElements.some(checkbox => checkbox.checked);
     //if none are checked, default to all, otherwise only add values of checked boxes. 
     checkBoxElements.forEach(element => {
-        if (element.checked || !anyChecked) validTypes.push(element.value);
+        if (element.checked || !anyChecked) validTypes.push(element.dataset.filter);
     });
     return validTypes;
 }
 
-// --- Event Handlers ---
+// --- Event Handlers --- 
 function buttonClickHandler(behavior) {
     feedbackElement.textContent = `executing ${behavior.name} action...`;
     setTimeout(async () => {
         try {
             console.log(`Starting awaited ${behavior.name} action...`);
-            const result = await behavior.action(getValidTypes(), ...behavior.options); 
+            const validTypes = getValidTypes();
+            console.log(validTypes)
+            const result = await behavior.action(validTypes, ...behavior.options); 
             console.log(`DEBUG: Result from ${behavior.name} action:`, result);
             // Use a more descriptive message if possible
-            feedbackElement.textContent = result.message || (result.success ? `${behavior.name} finished. ${behavior.description} affected ${result.count} total instances.` : `${behavior.name} failed.`);
+            //feedbackElement.textContent = result.message || (result.success ? `${behavior.name} finished. ${behavior.description} affected ${result.count} total instances.` : `${behavior.name} failed.`);
             restoreFocus();
+            behavior.callback?.();
             // Optional: Alert only on unexpected failure 
             if (!result.success && result.message) { 
                 await core.showAlert(result.message);
@@ -55,7 +183,6 @@ function buttonClickHandler(behavior) {
         }    
     }, 1);
 }
-
 
 //Per this thread: https://forums.creativeclouddeveloper.com/t/clicking-any-button-on-any-uxp-panel-inactivates-keyboard-shortcuts-for-tools-and-brush-sizes/2379/11 
 //This stupid workaround is needed to ensure keyboard shortcuts work after any action is run. Fuck you adobe!
@@ -80,80 +207,104 @@ function restoreFocus() {
     }
 }
 
+function setActiveMenu(event) {
+  const activeMenu = event.target.value;
+  document.querySelector('.plugin-content').setAttribute('data-active-menu', activeMenu);
+}
 
 // --- Initialization ---
 function initializePanel() {
-    console.log("DEBUG: Initializing panel...");
+  console.log("DEBUG: Initializing panel...");
 
-    checkBoxElements.push(
-        document.getElementById('chkDesktop'),
-        document.getElementById('chkMobile'),
-        document.getElementById('chkTile')
-    );
-    feedbackElement = document.getElementById('feedback');
+  checkBoxElements.push(
+      document.getElementById('chkDesktop'),
+      document.getElementById('chkMobile'),
+  );
 
-    // Import actions directly
-    const behaviors = [
-        {
-            description: "Select All Layers With Name",
-            name: "Select",
-            action: selectLayersByName,
-            buttonId: 'btnSelect',
-            buttonElement: document.getElementById('btnSelect'),
-            options: []
-        },
-        {
-            description: "Link All Layers With Name",
-            name: "Link",
-            action: linkLayersByName,
-            buttonId: 'btnLink',
-            buttonElement: document.getElementById('btnLink'),
-            options: []
-        },
-        {
-            description: "Unlink All Layers With Name",
-            name: "Unlink",
-            action: unlinkLayersByName,
-            buttonId: 'btnUnlink',
-            buttonElement: document.getElementById('btnUnlink'),
-            options: []
-        },
-        {
-            description: "Delete All Layers With Name",
-            name: "Delete",
-            action: deleteLayersByName,
-            buttonId: 'btnDelete',
-            buttonElement: document.getElementById('btnDelete'),
-            options: []
-        },
-        {
-            description: "Propagate All Layers",
-            name: "Propagate",
-            action: propagateLayers,
-            buttonId: 'btnDuplicate',
-            buttonElement: document.getElementById('btnDuplicate'),
-            options: [false]
-        },
-        {
-            description: "Propagate Missing Layers",
-            name: "Propagate Missing",
-            action: propagateLayers,
-            buttonId: 'btnMissing',
-            buttonElement: document.getElementById('btnMissing'),
-            options: [true]
-        }
-    ];
+  // Import actions directly
+  const behaviors = [
+      {
+          description: "Select All Layers With Name",
+          name: "Select",
+          action: selectLayersByName,
+          buttonId: 'btnSelect',
+          buttonElement: document.getElementById('btnSelect'),
+          options: [],
+          callback: onSelect
+      },
+      {
+          description: "Link All Layers With Name",
+          name: "Link",
+          action: linkLayersByName,
+          buttonId: 'btnLink',
+          buttonElement: document.getElementById('btnLink'),
+          options: []
+      },
+      {
+          description: "Unlink All Layers With Name",
+          name: "Unlink",
+          action: unlinkLayersByName,
+          buttonId: 'btnUnlink',
+          buttonElement: document.getElementById('btnUnlink'),
+          options: []
+      },
+      {
+          description: "Delete All Layers With Name",
+          name: "Delete",
+          action: deleteLayersByName,
+          buttonId: 'btnDelete',
+          buttonElement: document.getElementById('btnDelete'),
+          options: []
+      },
+      {
+          description: "Propagate All Layers",
+          name: "Propagate",
+          action: propagateLayers,
+          buttonId: 'btnDuplicate',
+          buttonElement: document.getElementById('btnDuplicate'),
+          options: [false]
+      },
+      {
+          description: "Propagate Missing Layers",
+          name: "Propagate Missing",
+          action: propagateLayers,
+          buttonId: 'btnMissing',
+          buttonElement: document.getElementById('btnMissing'),
+          options: [true]
+      }
+  ];
 
-    behaviors.forEach(behavior => {
-        if (behavior.buttonElement) {
-            behavior.buttonElement.addEventListener('click', () => buttonClickHandler(behavior));
-        } else {
-            console.error(`Button element not found for ${behavior.buttonId}`);
-        }
-    });
+  behaviors.forEach(behavior => {
+      if (behavior.buttonElement) {
+          behavior.buttonElement.addEventListener('click', () => buttonClickHandler(behavior));
+      } else {
+          console.error(`Button element not found for ${behavior.buttonId}`);
+      }
+  });
 
-    document.getElementById('feedback').textContent = 'Panel ready.';
+  const sideNav = document.querySelector('sp-sidenav');
+  sideNav.addEventListener('change', setActiveMenu);
+  editorMenu = document.getElementById('#editor-menu');
+  actionBar = document.querySelector('.plugin-action-bar');
+  feedbackElement = document.getElementById('feedback');
+  editorMenu = document.getElementById('editor-menu');
+
+  feedbackElement.textContent = 'Panel ready.';
+
+  action.addNotificationListener(
+    [ { event: 'select' } ], 
+    onSelect
+  );
 }
+
+function genericActionHandler() {
+  console.log('generic action handler')
+}
+
+action.addNotificationListener(
+  [{ event: 'make' }],    // “make” is what BatchPlay uses for most tool commands
+  genericActionHandler
+);
 
 // Handle proper loading sequence
 document.addEventListener('DOMContentLoaded', () => {

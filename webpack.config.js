@@ -25,7 +25,10 @@ import { BundleAnalyzerPlugin } from "webpack-bundle-analyzer";
 import path from "path";
 import { fileURLToPath } from "url";
 import { aliases } from "@swc-uxp-wrappers/utils";
-import 'queue-microtask';
+// Import CSS processing plugins
+import postcssImport from "postcss-import";
+import postcssPresetEnv from "postcss-preset-env";
+import cssnano from "cssnano";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -64,7 +67,10 @@ const copyStatics = {
 const plugins = [
   new CleanWebpackPlugin(),
   new CopyWebpackPlugin(copyStatics),
-  new MiniCssExtractPlugin({ filename: "[name].bundle.css" }),
+  new MiniCssExtractPlugin({ 
+    filename: "css/[name].css",
+    chunkFilename: "css/[id].css"
+  }),
 ];
 
 function srcPath(subdir) {
@@ -98,14 +104,12 @@ const shared = (env) => {
       loader: "postcss-loader",
       options: {
         postcssOptions: {
-          plugins: (loader) => [
-            require("postcss-import")({
-              root: loader.resourcePath,
-            }),
-            require("postcss-preset-env")({
+          plugins: [
+            postcssImport,
+            postcssPresetEnv({
               browsers: "last 2 versions",
             }),
-            ...(IS_DEV ? [] : [require("cssnano")()]),
+            ...(IS_DEV ? [] : [cssnano()]),
           ],
         },
       },
@@ -116,7 +120,8 @@ const shared = (env) => {
     entry: {
       main: [
         path.resolve(__dirname, './polyfill-queueMicrotask.js'),
-        './src/index.js'
+        './src/index.js',
+        './src/css/styles.css'
       ]
     },
     devtool: "cheap-module-source-map",
@@ -134,7 +139,17 @@ const shared = (env) => {
       rules: [
         {
           test: /\.css$/,
-          use: [MiniCssExtractPlugin.loader, ...cssLoaders],
+          use: [
+            MiniCssExtractPlugin.loader,
+            ...cssLoaders
+          ],
+        },
+        {
+          test: /\.(png|svg|jpg|jpeg|gif)$/i,
+          type: 'asset/resource',
+          generator: {
+            filename: 'images/[name][ext]'
+          }
         }
       ],
     },

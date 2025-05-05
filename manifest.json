@@ -19,15 +19,15 @@
         "height": 300
       },
       "maximumSize": {
-        "width": 2000,
+        "width": 6000,
         "height": 2000
       },
       "preferredDockedSize": {
-        "width": 400,
+        "width": 1200,
         "height": 300
       },
       "preferredFloatingSize": {
-        "width": 400,
+        "width": 1200,
         "height": 300
       }
     }
@@ -42,10 +42,6 @@
     {
       "app": "PS",
       "minVersion": "24.4.0"
-    },
-    {
-      "app": "ID",
-      "minVersion": "18.0"
     }
   ]
 }

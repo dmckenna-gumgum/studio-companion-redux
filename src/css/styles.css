@@ -1,0 +1,143 @@
+/* Main Styles for Creative Studio Companion */
+body, html, sp-theme {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+}
+
+
+.plugin-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: stretch;
+    height: 100%;
+}
+
+.plugin-action-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 0;
+}
+
+.plugin-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #545454;
+    flex: 0 1 auto;
+}
+
+.plugin-title {
+  padding: 0;
+  margin: 0;
+}
+
+.plugin-main {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    flex: 1;
+}
+
+.plugin-nav {
+  padding: 1rem;
+}
+
+.plugin-nav {
+    width: 200px;
+    height: 100%;
+    border-right: 1px solid #545454;
+    box-shadow: 0px 1px 4px rgba(0,0,0,0.5);
+}
+
+.plugin-sidenav {
+    width: auto;
+}
+
+.plugin-menu {
+  display: none;
+  flex-direction: row;
+  justify-content: stretch;
+  align-items: flex-start;
+  flex: 1;  
+}
+
+.plugin-menu-section {
+    padding: 1rem 2rem;
+    border-right: 1px solid #545454;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    flex: 1 1 auto;
+}
+
+.plugin-menu-section:first-child {
+  padding-left: 2rem;
+}
+
+.plugin-menu-section:last-child {
+    padding-right: 2rem;
+    border-right: none;
+}
+
+.plugin-content[data-active-menu="assistant"] #assistant-menu,
+.plugin-content[data-active-menu="editor"] #editor-menu,
+.plugin-content[data-active-menu="production"] #production-menu {
+  display: flex;
+}
+
+
+.plugin-control-cluster {
+  display: flex;
+  flex-direction: column;
+  padding: 0 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.plugin-control-cluster--row {
+  flex-direction: row;
+}
+
+.plugin-label {
+  font-weight: 500;
+  font-size: var(--uxp-host-font-size-larger);
+  margin-bottom: 0.5rem;
+}
+
+sp-switch {
+  margin: 0.25rem 0;
+}
+
+
+.plugin-option-note{
+  font-size: var(--uxp-host-font-size-smaller);
+  flex: 0 1 auto;
+}
+
+sp-button-group {
+  display: flex;
+  justify-content: stretch;
+}
+
+sp-button-group > sp-button {
+  flex: 1;
+}
+
+.plugin-flex {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+}
+
+.plugin-flex--flex-row {
+  flex-direction: row;
+}
+
+.plugin-flex--no-grow {
+  flex-grow: 0;
+}

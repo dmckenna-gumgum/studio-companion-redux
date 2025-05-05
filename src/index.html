@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <title>Creative Studio Companion</title>
-    <!-- <link rel="stylesheet" href="css/styles.css"> -->
+    <link rel="stylesheet" href="css/main.css">
     <style>
         /* For diagnostic purposes */
         sp-button {
@@ -13,58 +13,100 @@
 </head>
 <body>
     <script src="main.bundle.js"></script>
-    <sp-theme scale="medium" color="dark" theme="spectrum" dir="ltr" style="background-color: var(--spectrum-gray-500);"> 
-        
-        <div class="container">
-            <div class="options-group">
-                <h3>Target Containers</h3>
-                <div class="checkbox-cluster">
-                    <label class="option-label">
-                        <input type="checkbox" id="chkDesktop" value=":dt"> Desktop (:dt)
-                    </label>
-                    <label class="option-label">
-                        <input type="checkbox" id="chkMobile" value=":mb"> Mobile (:mb)
-                    </label>
-                    <label class="option-label">
-                        <input type="checkbox" id="chkTile" value="-tile"> Tile (-tile)
-                    </label>
-                    <small class="option-note">(Leave all unchecked to target all)</small>
-                </div>
-                <h3>Scaling</h3>
-                <div class="input-cluster">
-                    <label for="numScalePercent" class="option-label">Scale By:</label>
-                    <input type="number" id="numScalePercent" value="100" min="1" max="10000" step="1" class="scale-input"> %
-                </div>
-                <hr class="separator">
+    <sp-theme scale="medium" color="dark" theme="spectrum" dir="ltr" style="color: white;">
+        <div class="plugin-container">
+            <div class="plugin-header">
+                <h2 class="plugin-title">Velocity: Editor</h3>
             </div>
-            <div class="action-group">
-                <h2>Selecting & Linking</h2>
-                <div class="button-cluster">    
-                    <sp-button id="btnSelect">Select Layers by Name</sp-button>
-                    <sp-button id="btnLink">Link Layer by Name</sp-button>
-                    <sp-button id="btnUnlink">Unlink Layer by Name</sp-button>
+            <div class="plugin-main">
+                <div class="plugin-nav">
+                    <sp-sidenav class="plugin-sidenav" defaultValue="editor">
+                        <sp-sidenav-item
+                            value="assistant"
+                            label="Build Assistant"
+                        ><sp-icon-magicwand slot="icon"></sp-icon-magic-wand></sp-sidenav-item>
+                        <sp-sidenav-item
+                            value="editor"
+                            label="Editor"
+                            selected
+                        ><sp-icon-pencil slot="icon"></sp-icon-pencil></sp-sidenav-item>
+                        <sp-sidenav-item
+                            value="production"
+                            label="Production"
+                        ><sp-icon-applicationdelivery slot="icon"></sp-icon-application-delivery></sp-sidenav-item>
+                    </sp-sidenav>
                 </div>
+                <div class="plugin-content plugin-flex plugin-flex--column" data-active-menu="editor">
+                    <div class="plugin-menu" id="assistant-menu">
+                        <span>Build Assistant Content</span>
+                    </div>
+                    <div class="plugin-menu" id="editor-menu">
+                        <div class="plugin-menu-section plugin-flex--no-grow"> 
+                            <h4 class="plugin-label">Editor Scope</h4>
+                            <div class="plugin-flex plugin-flex--flex-row plugin-flex--no-grow">
+                                <div class="plugin-control-cluster">
+                                    <sp-field-label for="vertical">
+                                        Devices
+                                    </sp-field-label>
+                                    <sp-field-group vertical label="Devices">
+                                        <sp-switch id="chkDesktop" data-filter=":dt">Desktop</sp-switch>
+                                        <sp-switch id="chkMobile" data-filter=":mb">Mobile</sp-switch>
+                                    </sp-field-group>
+                                </div>
+                                <div class="plugin-control-cluster">
+                                    <sp-field-label for="vertical">
+                                        States
+                                    </sp-field-label>
+                                    <sp-field-group vertical label="States">
+                                        <sp-switch id="chkIntro" data-filter="intro">Introduction</sp-switch>
+                                        <sp-switch id="chkExpanded" data-filter="expanded">Expanded</sp-switch>
+                                        <sp-switch id="chkCollapsed" data-filter="collapsed">Collapsed</sp-switch>
+                                    </sp-field-group>
+                                </div>
+                            </div>
+                            <small class="plugin-option-note">All unchecked = target everything</small>
+                        </div>
+                        <div class="plugin-menu-section">
+                            <div class="plugin-control-cluster">                                
+                                <h4 class="plugin-label">Layer Selection Shortcuts</h4>
+                                <sp-button-group>
+                                    <sp-button variant="secondary" treatment="outline" id="btnSelect">Select Layers by Name</sp-button>
+                                    <sp-button variant="secondary" treatment="outline" id="btnLink">Link Layer by Name</sp-button>
+                                    <sp-button variant="secondary" treatment="outline" id="btnUnlink">Unlink Layer by Name</sp-button>
+                                </sp-button-group>
+                            </div>
+                            <div class="plugin-control-cluster">                              
+                                <h4 class="plugin-label">Asset Action</h4>
+                                <sp-button-group>
+                                    <sp-button variant="secondary" treatment="outline" id="btnDuplicate">Propagate Asset(s)</sp-button>    
+                                    <sp-button variant="secondary" treatment="outline" id="btnMissing">Fill Missing Asset(s)</sp-button>
+                                    <sp-button variant="secondary" treatment="outline" id="btnDelete">Purge Asset(s)</sp-button>
+                                    <sp-button variant="secondary" treatment="outline" id="btnScale">Scale Asset(s)</sp-button>
+                                </sp-button-group>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="plugin-menu" id="production-menu">
+                        <span>Production Content</span>
+                    </div>
+                </div>                
             </div>
-            <div class="action-group">
-                <h2>Asset Actions</h2>
-                <div class="button-cluster">    
-                    <sp-button id="btnDuplicate">Propagate Asset(s)</sp-button>    
-                    <sp-button id="btnMissing">Fill Missing Asset(s)</sp-button>
-                    <sp-button id="btnDelete">Purge Asset(s)</sp-button>
-                    <sp-button id="btnScale">Scale Asset(s)</sp-button>
-                </div>
-            </div>
-            <sp-action-bar open>
-                2 selected
-                <sp-action-button slot="buttons" label="Edit">
-                    <sp-icon-edit slot="icon"></sp-icon-edit>
+            <sp-action-bar class="plugin-action-bar" emphasized>
+                <p id="feedback" class="feedback-area">Loading...</p>
+                <sp-action-button slot="buttons" label="Scale">
+                    <sp-icon-maximize slot="icon"></sp-icon-maximize>
+                    Scale
                 </sp-action-button>
-                <sp-action-button slot="buttons" label="More">
-                    <sp-icon-more slot="icon"></sp-icon-more>
+                <sp-action-button slot="buttons" label="Rotate">
+                    <sp-icon-rotate slot="icon"></sp-icon-rotate>
+                    Rotate
+                </sp-action-button>
+                <sp-action-button slot="buttons" label="Delete">
+                    <sp-icon-delete slot="icon"></sp-icon-delete>
+                    Delete
                 </sp-action-button>
             </sp-action-bar>
-            <p id="feedback" class="feedback-area">Loading...</p>
-        </div>  
+        </div>     
     </sp-theme>
 </body>
 
