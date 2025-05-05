@@ -121,6 +121,10 @@ const shared = (env) => {
     entry: {
       main: [
         path.resolve(__dirname, './polyfill-queueMicrotask.js'),
+        // Include all the Spectrum Web Components that need to be bundled
+        ...Object.entries(aliases)
+          .filter(([key]) => key.startsWith('@spectrum-web-components/'))
+          .map(([_, value]) => value),
         './src/index.js',
         './src/css/styles.css'
       ]
@@ -155,8 +159,7 @@ const shared = (env) => {
       ],
     },
     resolve: {
-      extensions: ['.js', '.mjs', '.json', '...'],
-      mainFields: ['browser','module','main'],
+      extensions: [".js", ".json"],
       alias: aliases,
     },
     plugins,

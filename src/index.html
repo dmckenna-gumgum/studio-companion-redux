@@ -20,15 +20,15 @@
             </div>
             <div class="plugin-main">
                 <div class="plugin-nav">
-                    <sp-sidenav class="plugin-sidenav" defaultValue="editor">
+                    <sp-sidenav class="plugin-sidenav" defaultValue="assistant">
                         <sp-sidenav-item
                             value="assistant"
                             label="Build Assistant"
+                            selected
                         ><sp-icon-magicwand slot="icon"></sp-icon-magic-wand></sp-sidenav-item>
                         <sp-sidenav-item
                             value="editor"
                             label="Editor"
-                            selected
                         ><sp-icon-pencil slot="icon"></sp-icon-pencil></sp-sidenav-item>
                         <sp-sidenav-item
                             value="production"
@@ -36,9 +36,21 @@
                         ><sp-icon-applicationdelivery slot="icon"></sp-icon-application-delivery></sp-sidenav-item>
                     </sp-sidenav>
                 </div>
-                <div class="plugin-content plugin-flex plugin-flex--column" data-active-menu="editor">
-                    <div class="plugin-menu" id="assistant-menu">
-                        <span>Build Assistant Content</span>
+                <div class="plugin-content plugin-flex plugin-flex--column" data-active-menu="assistant">
+                    <div class="plugin-menu plugin-menu--assistant plugin-flex--flex-column" id="assistant-menu">
+                        <div class="plugin-step-section">
+                            <div class="plugin-progress-component">
+                                <h5 class="plugin-step-note"><span class="plugin-step-number">Step 1:</span> <span class="plugin-step-name">Design Rest States</span></h5>
+                                <div class="plugin-progress-bar">
+                                    <div class="plugin-progress-bar-fill"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="plugin-step-section plugin-step-section--fixed">
+                            <sp-button variant="secondary" treatment="outline" class="plugin-step-button" id="btnPrev">Previous</sp-button>
+                            <p class="plugin-step-text">Start by building the designs for the rest state of your Velocity. Velocity Ads have two sizes, and each size has two rest states. Once you’ve completed these four boards click next and I’ll convert any remaining raster or text layers to smart objects and move to the next step.</p>
+                            <sp-button variant="secondary" treatment="outline" class="plugin-step-button" id="btnNext">Next</sp-button>
+                        </div>
                     </div>
                     <div class="plugin-menu" id="editor-menu">
                         <div class="plugin-menu-section plugin-flex--no-grow"> 
@@ -70,7 +82,9 @@
                             <div class="plugin-control-cluster">                                
                                 <h4 class="plugin-label">Layer Selection Shortcuts</h4>
                                 <sp-button-group>
-                                    <sp-button variant="secondary" treatment="outline" id="btnSelect">Select Layers by Name</sp-button>
+                                    <sp-button variant="secondary" treatment="outline" id="btnSelect">
+                                        Select Layers by Name
+                                    </sp-button>
                                     <sp-button variant="secondary" treatment="outline" id="btnLink">Link Layer by Name</sp-button>
                                     <sp-button variant="secondary" treatment="outline" id="btnUnlink">Unlink Layer by Name</sp-button>
                                 </sp-button-group>
@@ -81,7 +95,6 @@
                                     <sp-button variant="secondary" treatment="outline" id="btnDuplicate">Propagate Asset(s)</sp-button>    
                                     <sp-button variant="secondary" treatment="outline" id="btnMissing">Fill Missing Asset(s)</sp-button>
                                     <sp-button variant="secondary" treatment="outline" id="btnDelete">Purge Asset(s)</sp-button>
-                                    <sp-button variant="secondary" treatment="outline" id="btnScale">Scale Asset(s)</sp-button>
                                 </sp-button-group>
                             </div>
                         </div>
@@ -93,16 +106,13 @@
             </div>
             <sp-action-bar class="plugin-action-bar" emphasized>
                 <p id="feedback" class="feedback-area">Loading...</p>
-                <sp-action-button slot="buttons" label="Scale">
-                    <sp-icon-maximize slot="icon"></sp-icon-maximize>
+                <sp-action-button slot="buttons" id="btnScale" label="Scale">
                     Scale
                 </sp-action-button>
-                <sp-action-button slot="buttons" label="Rotate">
-                    <sp-icon-rotate slot="icon"></sp-icon-rotate>
+                <sp-action-button slot="buttons" id="btnRotate" label="Rotate">
                     Rotate
                 </sp-action-button>
-                <sp-action-button slot="buttons" label="Delete">
-                    <sp-icon-delete slot="icon"></sp-icon-delete>
+                <sp-action-button slot="buttons" id="btnDelete" label="Delete">
                     Delete
                 </sp-action-button>
             </sp-action-bar>

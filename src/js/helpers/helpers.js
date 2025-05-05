@@ -29,7 +29,10 @@ function findValidGroups(potentialGroups, sourceContainer, nameFilters = []) {
         ////this will eventually need AND/OR logic to handle multiple filters
         const matchesFilter = (
             nameFilters.length === 0 ||
-            nameFilters.some(filter => group.name?.includes(filter))
+            nameFilters.some((filter) => {
+                console.log(`(findAllGroups) Comparing: ${group.name} against ${filter}`);
+                return group.name?.includes(filter) || group.name === filter;
+            })
         );
         console.log(`(findAllGroups) Group: ${group.name}, isNotSource: ${isNotSource}, matchesFilter: ${matchesFilter}`);
 
@@ -159,6 +162,99 @@ async function placeAtCorrectDepth(layer, targetContainer, distanceFromBottom) {
     }
 }
 
+/**
+ * Shows a modal dialog with a title, label, text input, and OK/Cancel buttons.
+ * @param {string} label Text for the input field label.
+ * @param {string} title Text for the dialog title.
+ * @param {string} [defaultValue=''] Optional default value for the input field.
+ * @param {string} [okText='OK'] Optional text for the OK button.
+ * @param {string} [cancelText='Cancel'] Optional text for the Cancel button.
+ * @returns {Promise<{dismissed: boolean, value: string | null}>} Promise resolving with the input value or null if dismissed.
+ */
+async function showInputDialog(label, title, defaultValue = '', okText = 'OK', cancelText = 'Cancel') {
+    return new Promise((resolve) => {
+        // Create dialog elements dynamically
+        const dialog = document.createElement('dialog');
+        const spDialog = document.createElement('sp-dialog');
+        spDialog.setAttribute('size', 's'); // Small size dialog
+        spDialog.classList.add('dialog-confirm'); // Optional class for styling
+
+        const heading = document.createElement('sp-heading');
+        heading.slot = 'heading';
+        heading.textContent = title;
+
+        const divider = document.createElement('sp-divider');
+        divider.slot = 'heading';
+        divider.setAttribute('size', 's');
+
+        const content = document.createElement('div');
+        content.slot = 'content';
+
+        const fieldLabel = document.createElement('sp-field-label');
+        fieldLabel.setAttribute('for', 'inputField');
+        fieldLabel.textContent = label;
+
+        const inputField = document.createElement('sp-textfield');
+        inputField.id = 'inputField';
+        inputField.value = defaultValue;
+        // Automatically select the text field content for easy replacement
+        inputField.addEventListener('focus', () => inputField.select()); 
+
+        content.appendChild(fieldLabel);
+        content.appendChild(inputField);
+
+        const buttonGroup = document.createElement('sp-button-group');
+        buttonGroup.slot = 'button';
+        buttonGroup.setAttribute('align', 'end');
+
+        const cancelButton = document.createElement('sp-button');
+        cancelButton.variant = 'secondary';
+        cancelButton.treatment = 'outline';
+        cancelButton.textContent = cancelText;
+        cancelButton.onclick = () => {
+            resolve({ dismissed: true, value: null });
+            dialog.close(); // Close the native dialog element
+        };
+
+        const okButton = document.createElement('sp-button');
+        okButton.variant = 'cta';
+        okButton.textContent = okText;
+        okButton.onclick = () => {
+            resolve({ dismissed: false, value: inputField.value });
+            dialog.close();
+        };
+        
+        // Allow submitting with Enter key
+        inputField.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                okButton.click();
+            }
+        });
+
+        buttonGroup.appendChild(cancelButton);
+        buttonGroup.appendChild(okButton);
+
+        // Assemble the dialog
+        spDialog.appendChild(heading);
+        spDialog.appendChild(divider);
+        spDialog.appendChild(content);
+        spDialog.appendChild(buttonGroup);
+        dialog.appendChild(spDialog);
+
+        // Append to body and show
+        document.body.appendChild(dialog);
+
+        // Add cleanup for when the dialog is closed (either by button or Escape key)
+        dialog.addEventListener('close', () => {
+            dialog.remove(); // Remove from DOM after closing
+        });
+        
+        // Show the modal. Focus the input field shortly after.
+        dialog.showModal();
+        setTimeout(() => inputField.focus(), 50); // Delay focus slightly
+    });
+}
+
 export {
     getLayerContainer,
     findValidGroups,
@@ -168,5 +264,6 @@ export {
     duplicateAndMoveToBottom,
     getRelativePosition,
     matchRelativePosition,
-    placeAtCorrectDepth
+    placeAtCorrectDepth,
+    showInputDialog
 };

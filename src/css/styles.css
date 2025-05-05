@@ -12,6 +12,7 @@ body, html, sp-theme {
     flex-direction: column;
     justify-content: stretch;
     height: 100%;
+    color: #D1D1D1;
 }
 
 .plugin-action-bar {
@@ -138,6 +139,76 @@ sp-button-group > sp-button {
   flex-direction: row;
 }
 
+.plugin-flex--flex-column {
+  flex-direction: column;
+}
+
 .plugin-flex--no-grow {
   flex-grow: 0;
+}
+
+.plugin-menu--assistant {
+    flex-direction: column;
+    justify-content: stretch;
+    align-items: stretch;
+    align-content: stretch;
+    padding: 1rem;
+}
+
+.plugin-step-section {
+    flex: 0 1 auto;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    align-content: center;
+    padding: 1rem 4rem;
+}
+
+.plugin-step-section--fixed {
+  /* max-width: 900px; */
+  text-align: center;
+}
+
+.plugin-progress-component {
+  flex: 1 1 auto;
+}
+
+.plugin-progress-bar {
+  height: 0.5rem;
+  background-color: #545454;
+  border-radius: 0.25rem;
+  overflow: hidden;
+}
+
+.plugin-progress-bar-fill {
+  height: 100%;
+  background-color: #54A3F6;
+  width: 5%;
+}
+
+.plugin-step-note {
+  font-size: var(--spectrum-theme-font-size-smaller);
+  font-weight: 400;
+  margin-bottom: 0.5rem;
+  color: #D1D1D1;
+}
+
+.plugin-step-number {
+    font-weight: 700;
+}
+
+.plugin-step-text {
+  display: inline-block;
+  max-width: 900px;
+  text-align: center;
+}
+.plugin-step-button {
+  flex: 0 1 auto;
+}
+.plugin-step-button:first-child {
+  margin-right: 2rem;
+}
+.plugin-step-button:last-child {
+  margin-left: 2rem;
 }

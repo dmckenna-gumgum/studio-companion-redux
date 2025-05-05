@@ -1,0 +1,2 @@
+1. All Photoshop interactions must utilize the modern UXP API and not the legacy Photoshop API
+2. All UI interactions must utilize the subset of Spectrum Web Component that are wrapped by swc-uxp-wrappers

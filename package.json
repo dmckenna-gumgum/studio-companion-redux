@@ -17,10 +17,13 @@
     "@swc-uxp-wrappers/banner": "^2.0.0",
     "@swc-uxp-wrappers/button-group": "^2.0.0",
     "@swc-uxp-wrappers/checkbox": "^2.0.0",
+    "@swc-uxp-wrappers/dialog": "^2.0.0",
+    "@swc-uxp-wrappers/divider": "^2.0.0",
     "@swc-uxp-wrappers/field-group": "^2.0.0",
     "@swc-uxp-wrappers/field-label": "^2.0.0",
     "@swc-uxp-wrappers/sidenav": "^2.0.0",
     "@swc-uxp-wrappers/switch": "^2.0.0",
+    "@swc-uxp-wrappers/textfield": "^2.0.0",
     "@swc-uxp-wrappers/utils": "^2.0.1",
     "import": "^0.0.6"
   },
@@ -39,5 +42,6 @@
   },
   "sideEffects": [
     "**/sp-*.js"
-  ]
+  ],
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
