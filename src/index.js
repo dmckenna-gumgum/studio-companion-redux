@@ -5,6 +5,10 @@ import './css/styles.css';
 import '@swc-uxp-wrappers/utils';
 import '@spectrum-web-components/theme/sp-theme.js';
 import '@spectrum-web-components/theme/src/themes.js';
+import '@spectrum-web-components/icons-ui/src/index.js';
+import '@spectrum-web-components/styles/src/spectrum-base.css';
+import '@spectrum-web-components/icon/sp-icon.js';
+import '@spectrum-web-components/icons/sp-icons-medium.js';
 import '@swc-uxp-wrappers/button/sp-button.js';
 import '@swc-uxp-wrappers/button-group/sp-button-group.js';
 import '@swc-uxp-wrappers/checkbox/sp-checkbox.js';
@@ -30,9 +34,19 @@ import { transformLayersIndividually } from "./js/actions/transformLayersIndivid
 
 // Assistant Step Actions
 import { normalizeAndPropagateRestStates } from "./js/buildActions/propagateRestState.js";
+import { propagateToIntro } from "./js/buildActions/propagateToIntro.js";
 
 // UXP modules
 const { app, core, action, constants } = require("photoshop");
+
+function finalize() {
+  console.log('all done!');    
+}
+
+const introSteps = {
+  desktop: 0,
+  mobile: 0
+}
 
 // Build Steps
 const buildSteps = [
@@ -40,21 +54,37 @@ const buildSteps = [
         id: 0,
         name: "Design Rest States",
         directions: "Start by building the designs for the rest state of your Velocity. Velocity Ads have two sizes, and each size has two rest states. Once you've completed these four boards click next and I'll convert any remaining raster or text layers to smart objects and move to the next step.",
-        action: normalizeAndPropagateRestStates,
+        action: {
+          main: normalizeAndPropagateRestStates
+        },
         callback: null,
     },
     {
         id: 1,
         name: "Design Velocity States",
         directions: "Now let's design how your add will look when it reacts to user scroll behavior. The top boards represent how your ad will look when the user is scrolling downwards. The boards on the bottom represent how your add will look when the user is scrolling upwards. Once you're done click next.",
-        action: null,
+        action: {
+          main: propagateToIntro,
+          subStep: {
+            button: '#buttonId',
+            subAction: propagateToIntro
+          }
+        },
+        options:['desktop', introSteps.desktop],
         callback: null,
     },
     {
         id: 2,
         name: "Design Desktop Intro Sequence",
-        directions: "Now let's design how your add will look when it reacts to user scroll behavior. The top boards represent how your ad will look when the user is scrolling downwards. The boards on the bottom represent how your add will look when the user is scrolling upwards. Once you're done click next.",
-        action: null,
+        directions: "Now we’ll create the desktop intro animation. It’s best to storyboard this in reverse: from the expanded rest state. Click the plus button to the right to clone and add a descending artboard in this sequence.",
+        action: {
+          main: propagateToIntro,
+          subStep: {
+            button: '#buttonId',
+            subAction: propagateToIntro
+          }
+        },
+        options:['mobile', introSteps.mobile],
         callback: null,
     },
     {
@@ -62,7 +92,7 @@ const buildSteps = [
         name: "Design Mobile Intro Sequence",
         directions: "Now we'll do the same for the mobile size.  Click the plus button to the right to clone and add a descending artboard in this sequence.  When you're done, hit next and we'll finalize this project for animating.",
         action: null,
-        callback: null,
+        callback: finalize,
     },
     {
         id: 4,
@@ -133,13 +163,17 @@ function stopSelectionPoll() {
 }
 
 function viableSelectionCheck(mixedTypes) {
-  if(!mixedTypes && !viableSelection) {
+  // if((!mixedTypes && !viableSelection) ) {
+  //   viableSelection = !mixedTypes;
+  //   //disable buttons
+  //   toggleButtonDisable();
+  // } else if(mixedTypes && viableSelection) {
+  //   viableSelection = !mixedTypes;
+  //   //enable buttons
+  //   toggleButtonDisable();
+  // }
+  if(mixedTypes === viableSelection) {
     viableSelection = !mixedTypes;
-    //disable buttons
-    toggleButtonDisable();
-  } else if(mixedTypes && viableSelection) {
-    viableSelection = !mixedTypes;
-    //enable buttons
     toggleButtonDisable();
   }
 }
@@ -198,7 +232,38 @@ function getValidTypes() {
 }
 
 // --- Update Step Function ---
-function updateStep(elements, direction = 'next') {
+async function runStep(elements, direction = 'next') {  
+  console.log('running step:', buildSteps[currentStep].name);
+  try {
+    await executeStepAction(buildSteps[currentStep].action.main, buildSteps[currentStep], elements, direction);
+  } catch (error) {
+    console.error('Error executing step action:', error);
+    await core.showAlert(`Error ${buildSteps[currentStep].name}: ${error}`);
+  }
+}
+
+function executeStepAction(actionFunc, buildStep, elements, type = 'next') {
+  feedbackElement.textContent = `executing ${buildStep.name} action...`;
+  setTimeout(async () => {
+      try {
+          console.log(`Starting awaited ${buildStep.name} action...`);
+          const result = await actionFunc(); 
+          console.log(`DEBUG: Result from ${buildStep.name} action:`, result);
+          restoreFocus();
+          if (!result.success && result.message) { 
+              await core.showAlert(result.message);
+          } else {
+              type === 'next' && incrementStep(elements, type, buildStep);
+          }
+      } catch (err) {
+          console.error(`DEBUG: Error calling ${buildStep.name} action:`, err);
+          const errorMessage = err.message || err.toString() || "Unknown error.";
+          await core.showAlert(`Error ${buildStep.name}: ${errorMessage}`);
+      }    
+  }, 1);
+}
+
+function incrementStep(elements, direction = 'next', buildStep) {    
   currentStep = direction === 'next' ? Math.min(currentStep+1, buildSteps.length-1) : Math.max(currentStep-1, 0);
   const step = buildSteps[currentStep];
   elements.stepNumber.textContent = `Step ${currentStep+1}:`;
@@ -210,32 +275,14 @@ function updateStep(elements, direction = 'next') {
   if (currentStep === 4) {
     elements.nextButton.textContent = 'Finish';
   }
-  if(direction === 'next') {
-    //executeStepAction(step);
-  }
-}
 
-function executeStepAction(buildStep) {
-  feedbackElement.textContent = `executing ${buildStep.name} action...`;
-    setTimeout(async () => {
-        try {
-            console.log(`Starting awaited ${buildStep.name} action...`);
-            //const result = await buildStep.action(); 
-            console.log(`DEBUG: Result from ${buildStep.name} action:`, result);
-            // Use a more descriptive message if possible
-            restoreFocus();
-            // behavior.callback?.();
-            // Optional: Alert only on unexpected failure 
-            if (!result.success && result.message) { 
-                await core.showAlert(result.message);
-            } 
-        } catch (err) {
-            console.error(`DEBUG: Error calling ${behavior.name} action:`, err);
-            const errorMessage = err.message || err.toString() || "Unknown error.";
-            feedbackElement.textContent = `Error: ${errorMessage}`;
-            await core.showAlert(`Error ${behavior.name}: ${errorMessage}`);
-        }    
-    }, 1);
+  //add substep button as-needed
+  if(buildStep.subStep) {
+    console.log('setup substep listener')
+    elements.subUi.classList.add('-show');
+    elements.subUi.querySelector('.plugin-sub-step-button').addEventListener('click', () => executeStepAction(buildStep.subStep.subAction, buildStep, elements, 'substep'));
+
+  }
 }
 
 // --- Event Handlers --- 
@@ -379,19 +426,18 @@ function initializePanel() {
     progressBarFill: document.querySelector('.plugin-progress-bar-fill'),
     stepNumber: document.querySelector('.plugin-step-number'),
     stepNote: document.querySelector('.plugin-step-note'),
-    stepName: document.querySelector('.plugin-step-name')
+    stepName: document.querySelector('.plugin-step-name'),
+    subUi: document.querySelector('.plugin-step-sub-ui')
   }
 
   assistantElements.prevButton.addEventListener('click', (event) => {
     event.preventDefault();
-    currentStep = Math.max(currentStep-1, 0);
-    updateStep(assistantElements, 'prev');
+    runStep(assistantElements, 'prev');
   });
 
   assistantElements.nextButton.addEventListener('click', (event) => {
     event.preventDefault();
-    currentStep = Math.min(currentStep+1, buildSteps.length-1);
-    updateStep(assistantElements, 'next');
+    runStep(assistantElements, 'next');
   });
 
   behaviors.forEach(behavior => {

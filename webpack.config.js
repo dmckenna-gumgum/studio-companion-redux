@@ -30,6 +30,7 @@ console.log('aliases:', aliases); // Add logging to see the actual aliases conte
 import postcssImport from "postcss-import";
 import postcssPresetEnv from "postcss-preset-env";
 import cssnano from "cssnano";
+import CopyPlugin from 'copy-webpack-plugin'; // Import CopyPlugin
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -71,6 +72,11 @@ const plugins = [
   new MiniCssExtractPlugin({ 
     filename: "css/[name].css",
     chunkFilename: "css/[id].css"
+  }),
+  new CopyPlugin({ // Add CopyPlugin configuration
+    patterns: [
+      { from: 'src/html', to: 'html' }, // Copy src/html to dist/html
+    ],
   }),
 ];
 

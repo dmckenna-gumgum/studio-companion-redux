@@ -1,0 +1,20 @@
+<!-- src/html/inputDialog.html -->
+<dialog id="inputDialogContainer" class="plugin-dialog">
+    <sp-dialog size="s" class="dialog-confirm">
+        <h2 slot="heading" id="dialogTitle">Dialog Title</h2>
+        <div class="plugin-dialog-menu">
+            <div class="plugin-dialog-input-container">
+                <sp-field-group>
+                    <sp-field-label for="dialogInput" class="plugin-dialog-label" id="dialogLabel">Input Label</sp-field-label>
+                    <sp-textfield id="dialogInput" class="plugin-dialog-input" value=""></sp-textfield>
+                </sp-field-group>
+            </div>
+            <div class="plugin-dialog-button-container">
+                <sp-button-group slot="button">
+                    <sp-button variant="secondary" treatment="outline" class="plugin-dialog-button" id="dialogCancelBtn">Cancel</sp-button>
+                    <sp-button variant="cta" class="plugin-dialog-button plugin-dialog-button-primary" id="dialogOkBtn">OK</sp-button>
+                </sp-button-group>
+            </div>
+        </div>
+    </sp-dialog>
+</dialog>

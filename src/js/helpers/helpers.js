@@ -1,4 +1,7 @@
-const { LayerKind, ElementPlacement } = require("photoshop").constants;
+const { app, core, action, constants } = require('photoshop');
+const { LayerKind, ElementPlacement } = constants;
+const { batchPlay } = action;
+const fs = require('uxp').storage.localFileSystem; // Import filesystem
 
 /**
  * Gets the parent container based on the first selected layer - warning: this will not work if selected layers span multiple groups or if they are not in a top-level group.
@@ -30,11 +33,11 @@ function findValidGroups(potentialGroups, sourceContainer, nameFilters = []) {
         const matchesFilter = (
             nameFilters.length === 0 ||
             nameFilters.some((filter) => {
-                console.log(`(findAllGroups) Comparing: ${group.name} against ${filter}`);
+                //console.log(`(findAllGroups) Comparing: ${group.name} against ${filter}`);
                 return group.name?.includes(filter) || group.name === filter;
             })
         );
-        console.log(`(findAllGroups) Group: ${group.name}, isNotSource: ${isNotSource}, matchesFilter: ${matchesFilter}`);
+        //console.log(`(findAllGroups) Group: ${group.name}, isNotSource: ${isNotSource}, matchesFilter: ${matchesFilter}`);
 
         if (isNotSource && matchesFilter) {
             acc.push(group);
@@ -132,6 +135,10 @@ async function matchRelativePosition(duplicatedLayer, relativePositions, targetC
 
 /**
  * Places a layer at the correct depth in the target container based on the source layer distance from the bottom of the stack. (this is a bit wonky and needs improvement)
+ * @param {Layer} layer The layer to place.
+ * @param {LayerSet} targetContainer The target artboard or group to place the layer in.
+ * @param {number} distanceFromBottom The source layer's distance from the bottom of the layer stack.    
+ * @returns {Promise<void>}
  */
 async function placeAtCorrectDepth(layer, targetContainer, distanceFromBottom) {    
     const targetLayers = targetContainer.layers; // Get layers AFTER duplication
@@ -172,87 +179,202 @@ async function placeAtCorrectDepth(layer, targetContainer, distanceFromBottom) {
  * @returns {Promise<{dismissed: boolean, value: string | null}>} Promise resolving with the input value or null if dismissed.
  */
 async function showInputDialog(label, title, defaultValue = '', okText = 'OK', cancelText = 'Cancel') {
-    return new Promise((resolve) => {
-        // Create dialog elements dynamically
-        const dialog = document.createElement('dialog');
-        const spDialog = document.createElement('sp-dialog');
-        spDialog.setAttribute('size', 's'); // Small size dialog
-        spDialog.classList.add('dialog-confirm'); // Optional class for styling
+    return new Promise(async (resolve) => { // Make the promise callback async
+        try {
+            // --- Get path to HTML file --- 
+            const pluginFolder = await fs.getPluginFolder();
+            const htmlFile = await pluginFolder.getEntry('html/inputDialog.html'); 
+            if (!htmlFile) {
+                console.error("Dialog HTML file not found: html/inputDialog.html");
+                resolve({ dismissed: true, value: null });
+                return;
+            }
 
-        const heading = document.createElement('sp-heading');
-        heading.slot = 'heading';
-        heading.textContent = title;
+            // --- Read HTML content ---
+            const htmlContent = await htmlFile.read();
 
-        const divider = document.createElement('sp-divider');
-        divider.slot = 'heading';
-        divider.setAttribute('size', 's');
+            // --- Create dialog from HTML string ---
+            const tempContainer = document.createElement('div');
+            tempContainer.innerHTML = htmlContent;
+            const dialog = tempContainer.querySelector('#inputDialogContainer'); // Get the <dialog> element
 
-        const content = document.createElement('div');
-        content.slot = 'content';
+            if (!dialog) {
+                console.error("Could not find #inputDialogContainer in HTML content.");
+                resolve({ dismissed: true, value: null });
+                return;
+            }
 
-        const fieldLabel = document.createElement('sp-field-label');
-        fieldLabel.setAttribute('for', 'inputField');
-        fieldLabel.textContent = label;
+            // --- Find elements and set content/values ---
+            const titleElement = dialog.querySelector('#dialogTitle');
+            const labelElement = dialog.querySelector('#dialogLabel');
+            const inputField = dialog.querySelector('#dialogInput');
+            const okButton = dialog.querySelector('#dialogOkBtn');
+            const cancelButton = dialog.querySelector('#dialogCancelBtn');
 
-        const inputField = document.createElement('sp-textfield');
-        inputField.id = 'inputField';
-        inputField.value = defaultValue;
-        // Automatically select the text field content for easy replacement
-        inputField.addEventListener('focus', () => inputField.select()); 
+            if (!titleElement || !labelElement || !inputField || !okButton || !cancelButton) {
+                console.error("One or more required dialog elements not found by ID in HTML.");
+                resolve({ dismissed: true, value: null });
+                return;
+            }
 
-        content.appendChild(fieldLabel);
-        content.appendChild(inputField);
+            titleElement.textContent = title;
+            labelElement.textContent = label;
+            inputField.value = defaultValue;
+            okButton.textContent = okText;
+            cancelButton.textContent = cancelText;
 
-        const buttonGroup = document.createElement('sp-button-group');
-        buttonGroup.slot = 'button';
-        buttonGroup.setAttribute('align', 'end');
+            // --- Attach event listeners --- 
+            cancelButton.onclick = () => {
+                resolve({ dismissed: true, value: null });
+                dialog.close();
+            };
 
-        const cancelButton = document.createElement('sp-button');
-        cancelButton.variant = 'secondary';
-        cancelButton.treatment = 'outline';
-        cancelButton.textContent = cancelText;
-        cancelButton.onclick = () => {
-            resolve({ dismissed: true, value: null });
-            dialog.close(); // Close the native dialog element
-        };
+            okButton.onclick = () => {
+                resolve({ dismissed: false, value: inputField.value });
+                dialog.close();
+            };
 
-        const okButton = document.createElement('sp-button');
-        okButton.variant = 'cta';
-        okButton.textContent = okText;
-        okButton.onclick = () => {
-            resolve({ dismissed: false, value: inputField.value });
-            dialog.close();
-        };
-        
-        // Allow submitting with Enter key
-        inputField.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                okButton.click();
+            inputField.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    okButton.click();
+                }
+            });
+
+            // Select text on focus
+            inputField.addEventListener('focus', () => inputField.select());
+
+            // --- Append to body and show ---
+            document.body.querySelector('sp-theme').appendChild(dialog);
+
+            dialog.addEventListener('close', () => {
+                dialog.remove(); // Cleanup from DOM
+            });
+
+            dialog.showModal();
+            setTimeout(() => inputField.focus(), 50); // Delay focus slightly
+
+        } catch (err) {
+            console.error("Error showing input dialog:", err);
+            resolve({ dismissed: true, value: null }); // Resolve as dismissed on error
+        }
+    });
+}
+
+function convertToSmartObject(layer) {
+    console.log("(convertToSmartObject) Preparing smart object conversion command for layer:", layer.name);
+    if (layer.kind === LayerKind.NORMAL || layer.kind === LayerKind.TEXT) {
+        const commands = [];
+        const layerRef = {_ref: "layer", _id: layer.id };
+        commands.push(
+            { 
+                _obj: "selectNoLayers", 
+                _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }]
+            },
+            {
+                _obj: "select",
+                _target: [layerRef],
+                makeVisible: false 
+            },
+            {
+                _obj: "newPlacedLayer",
+                _target: [layerRef],
+                _options: { dialogOptions: "dontDisplay" }
+            }
+        );
+        console.log('(prepareSmartObjectConversionCommand) Created new smart object convert command', commands);
+        return commands;
+    } else {
+        return [];
+    }
+}
+
+
+function rasterizeLayer(layer, rasterizeText = true, rasterizeLayerStyles = false) {
+    console.log("(rasterizeLayer) Rasterizing layer:", layer.name, layer.id);
+    const layerRef = {_ref: "layer", _id: layer.id };
+    const commands= [
+        { 
+            _obj: "selectNoLayers", 
+            _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }]
+        },
+        {
+            _obj: "select",
+            _target: [layerRef],
+            makeVisible: false 
+        }      
+    ];
+    if (rasterizeText) {
+        console.log("(rasterizeLayer) Rasterizing text for layer:", layer.name, layer.id);
+        commands.push({
+            _obj: "rasterizeLayer",
+            _target: [layerRef],
+        });
+    }
+    if (rasterizeLayerStyles) {
+        console.log("(rasterizeLayer) Rasterizing layer styles for layer:", layer.name, layer.id);
+        commands.push({
+            _obj: "rasterizeLayer",
+            _target: [layerRef],
+            what: {
+                _enum: "rasterizeItem",
+                _value: "layerStyle"
             }
         });
+    }
+    return commands;
+    //const rasterizeResult = await batchPlay(rasterizeCommands, {});
+    //return rasterizeResult;
+}
 
-        buttonGroup.appendChild(cancelButton);
-        buttonGroup.appendChild(okButton);
+async function duplicateBoardToBoard(sourceBoard, targetBoards) {
+    const layerDuplicates = [];
+    const sourceLayers = sourceBoard.layers;
+    for (const targetBoard of targetBoards) {
+        try {
+            ///propagate smart objects to velocity state boards
+            const placeCommands = [];
+            for (const layer of sourceLayers) {
+                const [duplicatedLayer, successIncrement] = await duplicateAndMoveToBottom(layer, targetBoard, 0);
+                layerDuplicates.push(duplicatedLayer);
+                console.log(`(duplicateBoardToBoard) Duplicated '${layer.name}' to '${targetBoard.name}'`);
+            }
+            console.log(`(duplicateBoardToBoard) Completed propagation of ${sourceLayers.length} layers to ${targetBoard.name}.`);
+        } catch (propagateError) {
+            console.error(`(duplicateBoardToBoard) Error propagating layers to '${targetBoard.name}': ${propagateError.message}`);
+            // Potentially non-critical, continue loop
+        }
+    }
+    return layerDuplicates;
+}
 
-        // Assemble the dialog
-        spDialog.appendChild(heading);
-        spDialog.appendChild(divider);
-        spDialog.appendChild(content);
-        spDialog.appendChild(buttonGroup);
-        dialog.appendChild(spDialog);
-
-        // Append to body and show
-        document.body.appendChild(dialog);
-
-        // Add cleanup for when the dialog is closed (either by button or Escape key)
-        dialog.addEventListener('close', () => {
-            dialog.remove(); // Remove from DOM after closing
-        });
-        
-        // Show the modal. Focus the input field shortly after.
-        dialog.showModal();
-        setTimeout(() => inputField.focus(), 50); // Delay focus slightly
-    });
+async function convertAllLayersToSmartObjects(artboard, rasterizeText, rasterizeLayerStyles) {
+    console.log("(convertAllLayersToSmartObjects) Converting layers to smart objects:", artboard);
+    console.log("(convertAllLayersToSmartObjects) Artboard layers:", artboard.layers);
+    const commands = [];
+    //loop through all layers in the artboard and prepare the batch command to execute
+    for (const layer of artboard.layers) {        
+        console.log("(convertAllLayersToSmartObjects) Making smart object from layer:", layer.name);
+        if (layer.kind === LayerKind.NORMAL || layer.kind === LayerKind.TEXT) {            
+            //if it's a text layer, and rasterizeText is true, add commands to rasterize it first
+            try {
+                commands.push(...rasterizeLayer(layer, rasterizeText, rasterizeLayerStyles));
+                console.log("(convertAllLayersToSmartObjects) Rasterize commands:", commands);
+            } catch (error) {
+                console.error("(convertAllLayersToSmartObjects) Error rasterizing layer:", layer.name, error);
+            }
+            //then add commands to convert to a smart object
+            try {
+                commands.push(...convertToSmartObject(layer));
+                console.log("(convertAllLayersToSmartObjects) Smart object conversion commands:", commands);
+            } catch (error) {
+                console.error("(convertAllLayersToSmartObjects) Error converting layer to smart object:", layer.name, error);
+            }
+        }
+    }  
+    //finally, execute the commands
+    const results = await batchPlay(commands, {});
+    console.log(`(convertAllLayersToSmartObjects) Completed conversion of layers inside ${artboard.name} to smart objects.`);
+    return results;
 }
 
 export {
@@ -265,5 +387,9 @@ export {
     getRelativePosition,
     matchRelativePosition,
     placeAtCorrectDepth,
-    showInputDialog
+    showInputDialog,
+    convertToSmartObject,
+    rasterizeLayer,
+    duplicateBoardToBoard,
+    convertAllLayersToSmartObjects,
 };

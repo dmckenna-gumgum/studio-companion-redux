@@ -1,149 +1,127 @@
 // client/js/actions/selectLayersByName.js
 const { app, core, action } = require('photoshop');
-const { LayerKind, ElementPlacement } = require("photoshop").constants;
 const { batchPlay } = action;
+import {findValidGroups, toggleHistory, duplicateBoardToBoard, convertAllLayersToSmartObjects } from '../helpers/helpers.js';
+const actionName = 'Propagate Layers to Velocity State Boards';
+const debug = false;
+const rasterizeText = false;
+const rasterizeLayerStyles = false;
+            
+const actionRoutes = [    
+    {
+        name: 'Mobile Expanded',
+        sourceName: 'morph-2-expanded-panel:mb',
+        sourceBoard: null,
+        destinationNames: ['morph-1-expanded-panel:mb', 'morph-3-expanded-panel:mb'],
+        destinationBoards: null,
+    },
+    {
+        name: 'Mobile Collapsed',
+        sourceName: 'morph-2-collapsed-panel:mb',
+        sourceBoard: null,
+        destinationNames: ['morph-1-collapsed-panel:mb', 'morph-3-collapsed-panel:mb'],
+        destinationBoards: null
+    },
+    {
+        name: 'Desktop Expanded',
+        sourceName: 'morph-2-expanded-panel:dt',
+        sourceBoard: null,
+        destinationNames: ['morph-1-expanded-panel:dt', 'morph-3-expanded-panel:dt'],
+        destinationBoards: null
+    },
+    {
+        name: 'Desktop Collapsed',
+        sourceName: 'morph-2-collapsed-panel:dt',
+        sourceBoard: null,
+        destinationNames: ['morph-1-collapsed-panel:dt', 'morph-3-collapsed-panel:dt'],
+        destinationBoards: null
+    }
+];
 
-import {findValidGroups } from '../helpers/helpers.js';
-
-
-async function normalizeAndPropagateRestStates() { 
-    const restBoardNames = ['morph-2-expanded-panel:mb', 'morph-2-expanded-panel:dt', 'morph-2-collapsed-panel:mb', 'morph-2-collapsed-panel:dt'];
+async function normalizeAndPropagateRestStates(propagateOnly = false) { 
+    debug && console.log("(Action Script) normalizeAndPropagateRestStates started.");
+    let executionResult = { success: false, message: "", count: 0 };  
     try {      
-
-        console.log("(Action) Attempting to convert all layers to smart objects and then propagate them to the velocity state boards (using executeAsModal)...");
+        debug && console.log("(Action) Attempting to convert all layers to smart objects and then propagate them to the velocity state boards (using executeAsModal)...");
         // --- Execute Selection Logic within Modal Context --- 
         const result = await core.executeAsModal(async (executionContext) => {
-            console.log("(Modal Action) Starting to convert layers to smart objects...")
-            // Prepare batchPlay command
-            const commands = [];
-
-
-
-            const boards = findValidGroups(app.activeDocument.layers, null, restBoardNames);
-            boards.forEach(board => {
-                console.log("(Action) Board name: " + board.name);
-                board.layers.forEach(layer => {
-                    if (layer.kind === LayerKind.NORMAL || layer.kind === LayerKind.TEXT) {
-                        // Convert raster layers to smart objects
-                        console.log('create new smart object convert command');
-                        const layerRef = { _ref: "layer", _id: layer.id };
-                        commands.push({
-                            _obj: "newPlacedLayer",
-                            _target: [layerRef],
-                            _options: { dialogOptions: "dontDisplay" }
-                        });
-                    }
-                });    
-            });
-
-            console.log('commands:', commands);
-            
-            let batchPlayResult;
-            if (commands.length > 1) { // Only run if there's something to do
-                console.log("(Modal Action) Executing batchPlay to convert layers:", JSON.stringify(commands));
-                batchPlayResult = await batchPlay(commands, {
-                    synchronousExecution: true, 
-                    modalBehavior: "execute"
-                });
-                console.log("(Modal Action) batchPlay result:", batchPlayResult);
-            } else {
-                console.log("(Modal Action) No matching layers found, nothing to convert via batchPlay.");
+            debug && console.log("(Modal Action) Starting to convert layers to smart objects...");
+            const hostControl = executionContext.hostControl;
+            const activeDoc = app.activeDocument;   
+            let successfulPropagations = 0;
+            for (const actionRoute of actionRoutes) {
+                actionRoute.sourceBoard = findValidGroups(activeDoc.layers, null, [actionRoute.sourceName])[0];
+                actionRoute.destinationBoards = findValidGroups(activeDoc.layers, null, actionRoute.destinationNames);
             }
 
-            // const allLayers = app.activeDocument.layers; 
-            // const matchingLayerIds = [];
+            debug && console.log("(Modal Action) Found boards:", actionRoutes);
+            if(actionRoutes.length === 0) {
+                await core.showAlert("No valid boards found.");
+                return { success: false, message: "No valid boards found.", count: 0 };
+            } else {
+                await toggleHistory(hostControl, "suspend", activeDoc.id, actionName);
+                try {
+                    for (let i = 0; i < actionRoutes.length; i++) {
+                        const sourceBoard = actionRoutes[i].sourceBoard;
+                        const targetBoards = actionRoutes[i].destinationBoards;
+                        debug && console.log(`(Modal Action) Processing board: ${sourceBoard.name} Found ${targetBoards.length} targets for propagation`);                    
+                        let sourceLayers;
+                        let layerDuplicates = [];
+                        if (!propagateOnly) {
+                            try {
+                                //rasterize and convert all layers to smart objects
+                                const result = await convertAllLayersToSmartObjects(sourceBoard, rasterizeText, rasterizeLayerStyles);
+                                console.log(`(Modal Action) Finished converting layers to smart objects on ${sourceBoard.name}`);                                
+                                //then duplicate to velocity state boards
+                                layerDuplicates = await duplicateBoardToBoard(sourceBoard, targetBoards);    
+                                console.log(`(Modal Action) Finished duplicating ${sourceBoard.name} layers to velocity state boards.`);    
+                            } catch (error) {
+                                debug && console.error(`(Modal Action) Error converting layers to smart objects on ${sourceBoard.name}: ${error.message}`);
+                                // Potentially non-critical, continue loop
+                            }
+                        } else {
+                            layerDuplicates = await duplicateBoardToBoard(sourceBoard, targetBoards);
+                            console.log(`(Modal Action) Finished duplicating ${sourceBoard.name} layers to velocity state boards.`); 
+                        }
+                        successfulPropagations += layerDuplicates.length;
 
-            // // Recursive function to find matching layer IDs (defined inside modal)
-            // function findMatchingLayerIds(layerSet) {
-            //     for (let i = 0; i < layerSet.length; i++) {
-            //         const layer = layerSet[i];
-            //         if (targetNames.has(layer.name)) {
-            //             matchingLayerIds.push(layer.id);
-            //         }
-            //         // Recurse into groups
-            //         if (layer.layers) {
-            //             findMatchingLayerIds(layer.layers);
-            //         }
-            //     }
-            // }
+                        for(const targetBoard of targetBoards) {
+                            targetBoard.visible = true;
+                        }
 
-            // console.log("(Modal Action) Starting recursive search for matching layer IDs...");
-            // findMatchingLayerIds(allLayers);
-            // console.log(`(Modal Action) Found ${matchingLayerIds.length} matching layer IDs:`, matchingLayerIds);
+                        debug && console.log(`(Modal Action) Completed propagation of ${sourceLayers.length} layers to ${targetBoards.length} targets. ${layerDuplicates.length} new instances created.`);
+                    } 
+                    let message = `Propagated layers to velocity state boards. Instances created: ${successfulPropagations}.`;
+                    await toggleHistory(hostControl, "resume", activeDoc.id);
+                    debug && console.log("(Modal Action) normalizeAndPropagateRestStates finished successfully.");
+                    executionResult = { success: true, message: message, count: successfulPropagations };
+                    return executionResult;       
+                } catch (error) {
+                    debug && console.error("(Modal Action) Error in normalizeAndPropagateRestStates:", error);
+                    await toggleHistory(hostControl, "resume", activeDoc.id);
+                    return { success: false, message: `Error: ${error.message || error}`, count: 0 };
+                }
+            }
 
-            // // History state for undo
-            // await executionContext.hostControl.suspendHistory({ 
-            //     "documentID": app.activeDocument.id, 
-            //     "name": "Select Layers By Name"
-            // });
+        }, { "commandName": actionName });
 
-            // // Prepare batchPlay command
-            // const commands = [
-            //     // 1. Deselect all layers
-            //     { 
-            //         _obj: "selectNoLayers", 
-            //         _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }]
-            //     }
-            // ];
+        // --- Process Result from Modal --- 
+        if (result.success) {
+            const message = `Propagated ${result.count} layers to velocity state boards.`;
+            debug && console.log(`(Action) ${message}`);
+            return { success: true, count: result.count, message: message };
+        } else {
+            // Use the message from the modal if available, otherwise default
+            const message = result.message || "An unexpected issue occurred during selection."; 
+            debug && console.log(`(Action) ${message}`);
+            await core.showAlert(message); 
+            return { success: false, count: 0, message: message };
+        }
 
-            // // 2. Add command to select matching layers if any were found
-            // if (matchingLayerIds.length > 0) {
-            //     const layerRefs = matchingLayerIds.map(id => ({ _ref: "layer", _id: id }));
-            //     commands.push({
-            //         _obj: "select",
-            //         _target: layerRefs,
-            //         selectionModifier: { _enum: "selectionModifierType", _value: "addToSelection" }, // Use addToSelectionContinuous for contiguous?
-            //         makeVisible: false // Keep visibility as is
-            //     });
-            // }
-
-            // let batchPlayResult;
-            // if (commands.length > 1 || matchingLayerIds.length === 0) { // Only run if there's something to do (select or just deselect)
-            //      console.log("(Modal Action) Executing batchPlay to select layers:", JSON.stringify(commands));
-            //      batchPlayResult = await batchPlay(commands, {
-            //         synchronousExecution: true, 
-            //         modalBehavior: "execute"
-            //      });
-            //      console.log("(Modal Action) batchPlay result:", batchPlayResult);
-            // } else {
-            //      console.log("(Modal Action) No matching layers found, nothing to select via batchPlay.");
-            // }
-
-            // await executionContext.hostControl.resumeHistory();
-
-            // Return result from the modal function
-            // const finalSelectedCount = matchingLayerIds.length; // Count based on IDs found
-              
-            // if (finalSelectedCount > 0) {
-            //     return { success: true, count: finalSelectedCount };
-            // } else {
-            //     // If initially selected layers existed but none matched after searching (e.g., renamed)
-                return { success: false, message: "Completed." }; 
-            // }
-
-        }, { "commandName": "Select Layers By Name Action" });
-
-        // // --- Process Result from Modal --- 
-        // if (result.success) {
-        //     const message = `Selected ${result.count} layers matching the name(s) of the initial selection.`;
-        //     console.log(`(Action) ${message}`);
-        //     return { success: true, count: result.count, message: message };
-        // } else {
-        //     // Use the message from the modal if available, otherwise default
-        //     const message = result.message || "An unexpected issue occurred during selection."; 
-        //     console.log(`(Action) ${message}`);
-        //     await core.showAlert(message); 
-        //     return { success: false, count: 0, message: message };
-        // }
-
-    } catch (e) {
-        // console.error("(Action) Error selecting matching layers:", e);
-        // const message = `Error selecting matching layers: ${e.message || e}`;
-        // // Avoid showing alert if the error was just 'No layers selected initially'
-        // if (!message.startsWith("No layers are currently selected")) {
-        //      await core.showAlert("An error occurred while selecting matching layers.");
-        // }
-        // return { success: false, message: message, error: e.message || e };
+    } catch (error) {
+        debug && console.error("(Action Script) Error in normalizeAndPropagateRestStates:", error);
+        await core.showAlert("An unexpected error occurred during normalizing and propagating rest states to velocity state boards. Check the console for details.");
+        return { success: false, message: `Error: ${error.message || error}`, count: 0 };
     }
 }
 

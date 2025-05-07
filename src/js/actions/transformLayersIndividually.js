@@ -20,7 +20,7 @@ async function transformLayersIndividually(validTypes, transformType) {
 
     try {
         // --- Prompt user for value using custom dialog ---
-        const promptLabel = transformType === 'scale' ? "Scale Percentage (%):" : "Rotation Angle (°):";
+        const promptLabel = transformType === 'scale' ? "Amount (%):" : "Angle (°):";
         const promptTitle = transformType === 'scale' ? "Scale Layers Additively" : "Rotate Layers Additively";
         const defaultValue = transformType === 'scale' ? "50" : "15";
 
@@ -107,6 +107,8 @@ async function transformLayersIndividually(validTypes, transformType) {
             for (let i = 0; i < selectedLayerIds.length; i++) {
                 const layerId = selectedLayerIds[i];
                 const properties = layerProperties[i];
+                console.log(`(Modal Action) Processing layer ID ${layerId}.`);
+                console.log(`(Modal Action) Layer properties:`, properties);
 
                 if (!properties) {
                     console.warn(`(Modal Action) Skipping layer ID ${layerId}: Could not retrieve properties.`);
