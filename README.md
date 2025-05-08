@@ -1,4 +1,4 @@
-# Studio Companion Redux (Velocity: Editor UXP Plugin)
+# Studio Companion Redux (UXP Plugin)
 
 **Version:** 2.0.0
 
