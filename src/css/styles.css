@@ -86,7 +86,7 @@ body, html, sp-theme {
     border-right: none;
 }
 
-.plugin-content[data-active-menu="assistant"] #assistant-menu,
+.plugin-content[data-active-menu="build"] #build-menu,
 .plugin-content[data-active-menu="editor"] #editor-menu,
 .plugin-content[data-active-menu="production"] #production-menu {
   display: flex;
@@ -147,7 +147,7 @@ sp-button-group > sp-button {
   flex-grow: 0;
 }
 
-.plugin-menu--assistant {
+.plugin-menu--build {
     flex-direction: column;
     justify-content: stretch;
     align-items: stretch;
@@ -209,8 +209,14 @@ sp-button-group > sp-button {
 
 .plugin-step-sub-ui {
   flex: 0 1 auto;
+  display: none;
+  pointer-events: none;
 }
 
+.-show {
+  display: flex;
+  pointer-events: auto;
+}
 
 .plugin-sub-step-button {
   flex: 0 1 auto;

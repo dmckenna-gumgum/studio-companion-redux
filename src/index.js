@@ -35,75 +35,188 @@ import { transformLayersIndividually } from "./js/actions/transformLayersIndivid
 // Assistant Step Actions
 import { normalizeAndPropagateRestStates } from "./js/buildActions/propagateRestState.js";
 import { propagateToIntro } from "./js/buildActions/propagateToIntro.js";
+import { revealAndPropagateToRestState } from "./js/buildActions/revealAndPropagateToRestState.js";
 
 // UXP modules
 const { app, core, action, constants } = require("photoshop");
 
-function finalize() {
-  console.log('all done!');    
+async function finalize() {
+  await console.log('all done!');    
 }
 
-const introSteps = {
-  desktop: 0,
-  mobile: 0
+let buildElements;
+const pluginState = {
+  currentMode: 'build',
+  sections: {
+    build: {
+      currentStep: 0,
+      introSteps: {
+        desktop: 0,
+        mobile: 0,
+      }
+    },
+    editor: {
+      behaviors: null,
+      elements: []
+    },
+    production: {
+    }
+  }
 }
 
+
+const getIntroSteps = (device) => {
+    return pluginState.sections.build.introSteps[device];
+}
+  
+const setIntroSteps = (device, step) => {
+    return pluginState.sections.build.introSteps[device] = step;
+}
+
+const setBuildStep = (step) => {
+    return pluginState.sections.build.currentStep = step;
+}
+
+const getBuildStep = () => {
+    return pluginState.sections.build.currentStep;
+}
 // Build Steps
 const buildSteps = [
     {
         id: 0,
-        name: "Design Rest States",
-        directions: "Start by building the designs for the rest state of your Velocity. Velocity Ads have two sizes, and each size has two rest states. Once you've completed these four boards click next and I'll convert any remaining raster or text layers to smart objects and move to the next step.",
-        action: {
-          main: normalizeAndPropagateRestStates
+        name: "Design Desktop Rest States",
+        directions: "Start by building the designs for the desktop rest states of your Velocity. Velocity Ads have two device sizes, and each device size has an expanded and a collapsed rest state. Once you've completed these two boards click next and I'll convert any remaining raster or text layers to smart objects and move to the next step.",
+        ////NO ACTIONS ON THIS STEP
+        action: null,
+        ///THIS ACTION RUNS WHEN YOU PRESS NEXT ON THIS STEP - IT'S THE ACTION THAT HAPPENS BETWEEN THIS STEP AND THE NEXT
+        nextAction: {
+            type: 'next',
+            device: 'desktop',
+            func: normalizeAndPropagateRestStates,
+            callbacks: [incrementStep],
+            options: [],
+            name: 'Create Velocity Boards',
+            description: 'Rasterizing, Converting and Propagating The Desktop Rest State Layers to Velocity State Artboards'
         },
-        callback: null,
     },
     {
         id: 1,
-        name: "Design Velocity States",
-        directions: "Now let's design how your add will look when it reacts to user scroll behavior. The top boards represent how your ad will look when the user is scrolling downwards. The boards on the bottom represent how your add will look when the user is scrolling upwards. Once you're done click next.",
-        action: {
-          main: propagateToIntro,
-          subStep: {
-            button: '#buttonId',
-            subAction: propagateToIntro
-          }
+        name: "Design Desktop Velocity States",
+        directions: "Start by building the designs for the rest state of your Velocity. Velocity Ads have two sizes, and each size has two rest states. Once you've completed these four boards click next and I'll convert any remaining raster or text layers to smart objects and move to the next step.",
+        ////NO ACTIONS ON THIS STEP
+        action: null,
+        ///THIS ACTION RUNS WHEN YOU PRESS NEXT ON THIS STEP - IT'S THE ACTION THAT HAPPENS BETWEEN THIS STEP AND THE NEXT
+        nextAction: {
+            type: 'next',
+            device: 'mobile',
+            func: revealAndPropagateToRestState,
+            callbacks: [incrementStep],
+            options: ['mobile'],
+            name: 'Reveal Mobile Rest States',
+            description: 'Reveal, Select, and Focus the Viewport on the Mobile Rest State Artboards'
         },
-        options:['desktop', introSteps.desktop],
-        callback: null,
     },
     {
         id: 2,
-        name: "Design Desktop Intro Sequence",
-        directions: "Now we’ll create the desktop intro animation. It’s best to storyboard this in reverse: from the expanded rest state. Click the plus button to the right to clone and add a descending artboard in this sequence.",
-        action: {
-          main: propagateToIntro,
-          subStep: {
-            button: '#buttonId',
-            subAction: propagateToIntro
-          }
+        name: "Design Mobile Rest States",
+        directions: "Start by building the designs for the desktop rest states of your Velocity. Velocity Ads have two device sizes, and each device size has an expanded and a collapsed rest state. Once you've completed these two boards click next and I'll convert any remaining raster or text layers to smart objects and move to the next step.",
+        ////NO ACTIONS ON THIS STEP
+        action: null,
+        ///THIS ACTION RUNS WHEN YOU PRESS NEXT ON THIS STEP - IT'S THE ACTION THAT HAPPENS BETWEEN THIS STEP AND THE NEXT
+        nextAction: {
+            type: 'next',
+            device: 'mobile',
+            func: normalizeAndPropagateRestStates,
+            callbacks: [incrementStep],
+            options: [],
+            name: 'Create Velocity Boards',
+            description: 'Rasterizing, Converting and Propagating The Mobile Rest State Layers to Velocity State Artboards'
         },
-        options:['mobile', introSteps.mobile],
-        callback: null,
     },
     {
         id: 3,
-        name: "Design Mobile Intro Sequence",
-        directions: "Now we'll do the same for the mobile size.  Click the plus button to the right to clone and add a descending artboard in this sequence.  When you're done, hit next and we'll finalize this project for animating.",
+        name: "Design Mobile Velocity States",
+        directions: "Now let's design how your add will look when it reacts to user scroll behavior. The top boards represent how your ad will look when the user is scrolling downwards. The boards on the bottom represent how your add will look when the user is scrolling upwards. Once you're done click next.",
+        ////NO ACTIONS ON THIS STEP
         action: null,
-        callback: finalize,
+        ///NEXT ACTION RUNS WHEN YOU PRESS "NEXT" BUTTON ON THIS STEP - THE STEP ONLY INCREMENTS IF THIS ACTION IS SUCCESSFUL
+        nextAction: {
+            type: 'next',
+            device: 'desktop',
+            func:propagateToIntro,
+            callbacks: [incrementStep, incrementSubStep],
+            options: ['desktop'],
+            name: 'Create Desktop Intro Board',
+            description: 'Clone the Desktop Expanded Artboard to Start a New Desktop Intro Artboard Sequence'
+        },
+    },
+    {
+        id: 3,
+        name: "Design Desktop Intro Sequence",
+        directions: "Now we'll create the desktop intro animation. It's best to storyboard this in reverse: from the expanded rest state. Click the plus button to the right to clone and add a descending artboard in this sequence.",
+        ////THIS ACTION CAN RUN MULTIPLE TIMES WITHIN THIS BUILD STEP
+        action: {
+            type: 'substep',
+            device: 'desktop',
+            func:propagateToIntro,
+            callbacks: [incrementSubStep],
+            options: ['desktop'],
+            name: 'Create Desktop Intro Board',
+            description: 'Clone the Last Intro Board Created, and Reorder the Numbering of the Artboards So This New Board is #1'
+        },
+        ///NEXT ACTION RUNS WHEN YOU PRESS "NEXT" BUTTON ON THIS STEP - THE STEP ONLY INCREMENTS IF THIS ACTION IS SUCCESSFUL
+        nextAction: {
+            type: 'next',
+            device: 'mobile',
+            func:propagateToIntro,
+            callbacks: [incrementStep, incrementSubStep],
+            options: ['mobile'],
+            name: 'Create Mobile Intro Board',
+            description: 'Clone the Mobile Expanded Artboard to Start a New Mobile Intro Artboard Sequence'
+        }
     },
     {
         id: 4,
+        name: "Design Mobile Intro Sequence",
+        directions: "Now we'll do the same for the mobile size.  Click the plus button to the right to clone and add a descending artboard in this sequence.  When you're done, hit next and we'll finalize this project for animating.",
+        ////THIS ACTION CAN RUN MULTIPLE TIMES WITHIN THIS BUILD STEP
+        action: {
+            type: 'substep',
+            device: 'mobile',
+            func:propagateToIntro,
+            callbacks: [incrementSubStep],
+            options: ['mobile'],
+            name: 'Create Mobile Intro Board',
+            description: 'Clone the Mobile Expanded Artboard to Start a New Mobile Intro Artboard Sequence'
+        },
+        ///NEXT ACTION RUNS WHEN YOU PRESS "NEXT" BUTTON ON THIS STEP - THE STEP ONLY INCREMENTS IF THIS ACTION IS SUCCESSFUL
+        nextAction: {
+            type: 'next',
+            device: 'both',
+            func: null, ///this will be a convert and sanitization action,
+            callbacks: [incrementStep],
+            options: [],
+            name: 'Finalize Project',
+            description: 'Fix Missing Smart Objects, Convert any lingering Raster Layers or Text, and Warn the User if Anything Looks Amiss'
+        }
+    },
+    {
+        id: 5,
         name: "Prepare for Production",
         directions: "You're almost done! Click finish and Studio Companion will do its best to prep your file for Studio. If you'd prefer to do this manually, click on the Production tab on the left and we'll provide some tools to make that process easier.",
+        ////NO ACTIONS ON THIS STEP
         action: null,
-        callback: null,
+        nextAction: {
+            type: 'next',
+            func: null, ///this will be a convert and sanitization action,
+            options: ['mobile'],
+            name: 'Move into Studio',
+            description: 'Move the Project into Studio' //maybe one day this can be done via API?
+        }
     }
 ];
 
-let currentStep = 0;
+// let currentStep = 0;
 let actionBar;
 let currentSelection = new Set();
 let selectionPoll;
@@ -231,63 +344,79 @@ function getValidTypes() {
     return validTypes;
 }
 
+
 // --- Update Step Function ---
-async function runStep(elements, direction = 'next') {  
-  console.log('running step:', buildSteps[currentStep].name);
-  try {
-    await executeStepAction(buildSteps[currentStep].action.main, buildSteps[currentStep], elements, direction);
-  } catch (error) {
-    console.error('Error executing step action:', error);
-    await core.showAlert(`Error ${buildSteps[currentStep].name}: ${error}`);
-  }
+async function runStep(type = 'next') {  
+    const currentStep = getBuildStep();
+    const buildStep = buildSteps[currentStep];
+    const action = type === 'next' ? buildStep.nextAction : buildStep.action;
+    try {
+        const result = await executeStepAction(action);
+        if(result.success) {
+            action.callbacks?.forEach(callback => callback(action));
+        } else {
+            await core.showAlert(result.message);
+        }
+    } catch (error) {
+        console.error('Error executing step action:', error);
+        await core.showAlert(`Error ${buildSteps[currentStep].name}: ${error}`);
+    }
 }
 
-function executeStepAction(actionFunc, buildStep, elements, type = 'next') {
-  feedbackElement.textContent = `executing ${buildStep.name} action...`;
-  setTimeout(async () => {
-      try {
-          console.log(`Starting awaited ${buildStep.name} action...`);
-          const result = await actionFunc(); 
-          console.log(`DEBUG: Result from ${buildStep.name} action:`, result);
-          restoreFocus();
-          if (!result.success && result.message) { 
-              await core.showAlert(result.message);
-          } else {
-              type === 'next' && incrementStep(elements, type, buildStep);
-          }
-      } catch (err) {
-          console.error(`DEBUG: Error calling ${buildStep.name} action:`, err);
-          const errorMessage = err.message || err.toString() || "Unknown error.";
-          await core.showAlert(`Error ${buildStep.name}: ${errorMessage}`);
-      }    
-  }, 1);
+async function executeStepAction(action) {
+    const {name, type, func, description, device} = action;
+    action.step = getIntroSteps(device);
+    console.log(`DEBUG: On ${type === 'substep' ? 'Substep' : 'Step'}: ${action.step+1}. User click initiated: ${name}, which will: ${description}`);
+    try {
+        console.log(`DEBUG: Action Payload:`, action);
+        const result = await func(action); 
+        restoreFocus();
+        if (!result.success && result.message) { 
+            await core.showAlert(result.message);
+        } 
+        return result;
+    } catch (err) {
+        console.error(`Error calling ${name} action:`, err);
+        const errorMessage = err.message || err.toString() || "Unknown error.";
+        await core.showAlert(`Error ${name}: ${errorMessage}`);
+    }    
 }
 
-function incrementStep(elements, direction = 'next', buildStep) {    
-  currentStep = direction === 'next' ? Math.min(currentStep+1, buildSteps.length-1) : Math.max(currentStep-1, 0);
-  const step = buildSteps[currentStep];
-  elements.stepNumber.textContent = `Step ${currentStep+1}:`;
-  elements.stepName.textContent = step.name;
-  elements.stepText.textContent = step.directions;
-  const progressWidth = Math.max(5, currentStep/(buildSteps.length-1)*100);
-  elements.progressBarFill.style.width = `${progressWidth}%`;
-  console.log('updating step:', step.name);
-  if (currentStep === 4) {
-    elements.nextButton.textContent = 'Finish';
-  }
 
-  //add substep button as-needed
-  if(buildStep.subStep) {
-    console.log('setup substep listener')
-    elements.subUi.classList.add('-show');
-    elements.subUi.querySelector('.plugin-sub-step-button').addEventListener('click', () => executeStepAction(buildStep.subStep.subAction, buildStep, elements, 'substep'));
+function incrementSubStep(action) {
+    // buildStep.options[1] = setIntroSteps(buildStep.device, getIntroSteps(buildStep.device)+1);
+    const introSteps = setIntroSteps(action.device, getIntroSteps(action.device)+1);
+    console.log(`DEBUG:${action.device} Intro Sequence Now Has ${introSteps} Steps`);
+} 
 
-  }
+function incrementStep(action) {   
+    const currentStep = setBuildStep(Math.min(getBuildStep()+1, buildSteps.length-1));//setBuildStep(type === 'next' ? Math.min(getBuildStep()+1, buildSteps.length-1) : Math.max(getBuildStep()-1, 0));
+    const buildStep = buildSteps[currentStep];
+    console.log(`DEBUG: Incrementing To Main Step: ${currentStep+1}, named: ${buildStep.name}`); 
+    updateBuildInterface(buildStep);
+}
+
+function updateBuildInterface(buildStep) {
+    const currentStep = getBuildStep();
+    buildElements.stepNumber.textContent = `Step ${currentStep+1}:`;
+    buildElements.stepName.textContent = buildStep.name;
+    buildElements.stepText.textContent = buildStep.directions;
+    const progressWidth = Math.max(5, currentStep/(buildSteps.length-1)*100);
+    buildElements.progressBarFill.style.width = `${progressWidth}%`;  
+    if (currentStep === 4) {
+      buildElements.nextButton.textContent = 'Finish';
+    }
+    //add substep button as-needed
+    if(buildStep.action !== null) {
+        buildElements.subUi.classList.add('-show');
+    } else {
+        buildElements.subUi.classList.remove('-show');
+    }
 }
 
 // --- Event Handlers --- 
 function buttonClickHandler(behavior) {
-    feedbackElement.textContent = `executing ${behavior.name} action...`;
+    console.log(`executing ${behavior.name} action...`);
     setTimeout(async () => {
         try {
             console.log(`Starting awaited ${behavior.name} action...`);
@@ -311,6 +440,7 @@ function buttonClickHandler(behavior) {
         }    
     }, 1);
 }
+
 
 //Per this thread: https://forums.creativeclouddeveloper.com/t/clicking-any-button-on-any-uxp-panel-inactivates-keyboard-shortcuts-for-tools-and-brush-sizes/2379/11 
 //This stupid workaround is needed to ensure keyboard shortcuts work after any action is run. Fuck you adobe!
@@ -417,9 +547,10 @@ function initializePanel() {
           options: ['rotate'] // Pass validTypes and transformType
       }
   ];
+  //temporary
+  pluginState.sections.editor.behaviors = behaviors;
 
-  
-  const assistantElements = {
+  buildElements = {
     nextButton: document.querySelector('#btnNext'),
     prevButton: document.querySelector('#btnPrev'),
     stepText: document.querySelector('.plugin-step-text'),
@@ -427,17 +558,26 @@ function initializePanel() {
     stepNumber: document.querySelector('.plugin-step-number'),
     stepNote: document.querySelector('.plugin-step-note'),
     stepName: document.querySelector('.plugin-step-name'),
-    subUi: document.querySelector('.plugin-step-sub-ui')
+    subUi: document.querySelector('.plugin-step-sub-ui'),
+    subUiButton: document.querySelector('.plugin-sub-step-button')
   }
 
-  assistantElements.prevButton.addEventListener('click', (event) => {
+  pluginState.sections.build.elements = buildElements;
+
+  buildElements.prevButton.addEventListener('click', async (event) => {
     event.preventDefault();
-    runStep(assistantElements, 'prev');
+    console.log('no back capability yet.');
+    //await runStep(pluginState.sections.build.elements, 'prev');
   });
 
-  assistantElements.nextButton.addEventListener('click', (event) => {
+  buildElements.nextButton.addEventListener('click', async (event) => {
     event.preventDefault();
-    runStep(assistantElements, 'next');
+    await runStep('next');
+  });
+
+  buildElements.subUiButton.addEventListener('click', async (event) => {
+    event.preventDefault();
+    await runStep('substep');
   });
 
   behaviors.forEach(behavior => {
@@ -459,11 +599,11 @@ function initializePanel() {
 
   feedbackElement.textContent = 'Panel ready.';
 
+  ///listen for layer selections and display action bar when a valid selection is made
   action.addNotificationListener(
     [ { event: 'select' } ], 
     onSelect
-  );
-  
+  );  
 }
 
 function genericActionHandler() {
