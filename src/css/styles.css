@@ -1,4 +1,10 @@
 /* Main Styles for Creative Studio Companion */
+:root {
+  /* Plugin panel background / text */
+  --plugin-bg: var(--uxp-host-background-color);
+  --plugin-text: var(--uxp-host-text-color);
+}
+
 body, html, sp-theme {
   margin: 0;
   padding: 0;
@@ -12,7 +18,8 @@ body, html, sp-theme {
     flex-direction: column;
     justify-content: stretch;
     height: 100%;
-    color: #D1D1D1;
+    background-color: var(--plugin-bg);
+    color: var(--plugin-text);
 }
 
 .plugin-action-bar {
@@ -177,6 +184,8 @@ sp-button-group > sp-button {
 .plugin-progress-bar {
   height: 0.5rem;
   background-color: #545454;
+  
+  color: var(--plugin-text);
   border-radius: 0.25rem;
   overflow: hidden;
 }
@@ -191,7 +200,7 @@ sp-button-group > sp-button {
   font-size: var(--spectrum-theme-font-size-smaller);
   font-weight: 400;
   margin-bottom: 0.5rem;
-  color: #D1D1D1;
+  color: var(--plugin-text);
 }
 
 .plugin-step-number {
@@ -233,10 +242,12 @@ sp-button-group > sp-button {
   padding: 0rem;
   height: 200px;
   width: 350px;
+  color: var(--plugin-text);
 }
 
 sp-dialog {
     padding: 0rem;
+    color: var(--plugin-text);
 }
 
 .plugin-dialog-menu {
@@ -249,6 +260,7 @@ sp-dialog {
 
 .plugin-dialog-label {
     font-size: var(--uxp-host-font-size-larger);
+    color: var(--plugin-text);
 }
 
 .plugin-dialog-input-container {

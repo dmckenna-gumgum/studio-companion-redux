@@ -28,7 +28,7 @@ async function transformLayersIndividually(validTypes, transformType) {
 
         if (dialogResult.dismissed) {
             console.log("(Action Script) User dismissed the dialog.");
-            return { success: false, message: "Transformation cancelled by user.", count: 0 };
+            return { success: true, message: "Transformation cancelled by user.", count: 0 };
         }
 
         // Parse and validate the returned value

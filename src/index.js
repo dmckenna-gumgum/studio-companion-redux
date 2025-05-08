@@ -1,14 +1,26 @@
 // Import CSS
 import './css/styles.css';
-
 // Import Spectrum components
 import '@swc-uxp-wrappers/utils';
-import '@spectrum-web-components/theme/sp-theme.js';
 import '@spectrum-web-components/theme/src/themes.js';
-import '@spectrum-web-components/icons-ui/src/index.js';
-import '@spectrum-web-components/styles/src/spectrum-base.css';
+import '@spectrum-web-components/theme/sp-theme.js';
 import '@spectrum-web-components/icon/sp-icon.js';
-import '@spectrum-web-components/icons/sp-icons-medium.js';
+import '@spectrum-web-components/icons-ui/icons/sp-icon-arrow500.js';
+import '@spectrum-web-components/icons-workflow/icons/sp-icon-add.js';
+import '@spectrum-web-components/icons-workflow/icons/sp-icon-wrench.js';
+import '@spectrum-web-components/icons-workflow/icons/sp-icon-delete.js';
+import '@spectrum-web-components/icons-workflow/icons/sp-icon-link.js';
+import '@spectrum-web-components/icons-workflow/icons/sp-icon-unlink.js';
+import '@spectrum-web-components/icons-workflow/icons/sp-icon-layers.js';
+import '@spectrum-web-components/icons-workflow/icons/sp-icon-maximize.js';
+import '@spectrum-web-components/icons-workflow/icons/sp-icon-rotate-c-w.js';
+import '@spectrum-web-components/icons-workflow/icons/sp-icon-magic-wand.js';
+import '@spectrum-web-components/icons-workflow/icons/sp-icon-edit.js';
+import '@spectrum-web-components/icons-workflow/icons/sp-icon-application-delivery.js';
+import '@spectrum-web-components/icons-workflow/icons/sp-icon-duplicate.js';
+import '@spectrum-web-components/icons-workflow/icons/sp-icon-education.js';
+import '@spectrum-web-components/icons-ui/src/index.js';
+
 import '@swc-uxp-wrappers/button/sp-button.js';
 import '@swc-uxp-wrappers/button-group/sp-button-group.js';
 import '@swc-uxp-wrappers/checkbox/sp-checkbox.js';
@@ -36,12 +48,65 @@ import { transformLayersIndividually } from "./js/actions/transformLayersIndivid
 import { normalizeAndPropagateRestStates } from "./js/buildActions/propagateRestState.js";
 import { propagateToIntro } from "./js/buildActions/propagateToIntro.js";
 import { revealAndPropagateToRestState } from "./js/buildActions/revealAndPropagateToRestState.js";
+import { readyPositioningForIntros } from "./js/buildActions/readyPositioningForIntros.js";
+
+
 
 // UXP modules
 const { app, core, action, constants } = require("photoshop");
+const { LayerKind } = constants;
 
 async function finalize() {
   await console.log('all done!');    
+}
+
+
+
+///placeholders for now. 
+const velocityConfig = {    
+    desktop: {
+        intro: {
+            steps: 0,
+            abbreviation: 'dt',
+            artboardNamePattern: 'intro-${step}-panel:dt',
+            artboards: []
+        },
+        expanded: {
+            steps: 3,
+            artboardNamePattern: 'morph-${step}-expanded-panel:dt',
+            artboards: [],
+        },
+        collapsed: {
+            steps: 3,
+            artboardNamePattern: 'morph-${step}-collapsed-panel:dt',
+            artboards: [],  
+        }
+    },
+    mobile: {
+        intro: {
+            steps: 0,
+            abbreviation: 'mb',
+            artboardNamePattern: 'intro-${step}-panel:mb',
+            artboards: []
+        },
+        expanded: {
+            steps: 3,
+            artboardNamePattern: 'morph-${step}-expanded-panel:mb',
+            artboards: [],
+        },
+        collapsed: {
+            steps: 3,
+            artboardNamePattern: 'morph-${step}-collapsed-panel:mb',
+            artboards: [],
+        }
+    }   
+}
+const hangtimeConfig = {
+    main: {
+        steps: 0,
+        artboardNamePattern: 'hangtime-sqc-${step}',
+        artboards: []
+    }
 }
 
 
@@ -81,6 +146,7 @@ const setBuildStep = (step) => {
 const getBuildStep = () => {
     return pluginState.sections.build.currentStep;
 }
+
 // Build Steps
 const buildSteps = [
     {
@@ -93,7 +159,7 @@ const buildSteps = [
         nextAction: {
             type: 'next',
             device: 'desktop',
-            func: normalizeAndPropagateRestStates,
+            funcs: [normalizeAndPropagateRestStates],
             callbacks: [incrementStep],
             options: [],
             name: 'Create Velocity Boards',
@@ -110,7 +176,7 @@ const buildSteps = [
         nextAction: {
             type: 'next',
             device: 'mobile',
-            func: revealAndPropagateToRestState,
+            funcs: [revealAndPropagateToRestState],
             callbacks: [incrementStep],
             options: ['mobile'],
             name: 'Reveal Mobile Rest States',
@@ -127,7 +193,7 @@ const buildSteps = [
         nextAction: {
             type: 'next',
             device: 'mobile',
-            func: normalizeAndPropagateRestStates,
+            funcs: [normalizeAndPropagateRestStates],
             callbacks: [incrementStep],
             options: [],
             name: 'Create Velocity Boards',
@@ -144,7 +210,7 @@ const buildSteps = [
         nextAction: {
             type: 'next',
             device: 'desktop',
-            func:propagateToIntro,
+            funcs: [readyPositioningForIntros, propagateToIntro],
             callbacks: [incrementStep, incrementSubStep],
             options: ['desktop'],
             name: 'Create Desktop Intro Board',
@@ -159,7 +225,7 @@ const buildSteps = [
         action: {
             type: 'substep',
             device: 'desktop',
-            func:propagateToIntro,
+            funcs: [propagateToIntro],
             callbacks: [incrementSubStep],
             options: ['desktop'],
             name: 'Create Desktop Intro Board',
@@ -169,7 +235,7 @@ const buildSteps = [
         nextAction: {
             type: 'next',
             device: 'mobile',
-            func:propagateToIntro,
+            funcs: [propagateToIntro],
             callbacks: [incrementStep, incrementSubStep],
             options: ['mobile'],
             name: 'Create Mobile Intro Board',
@@ -184,7 +250,7 @@ const buildSteps = [
         action: {
             type: 'substep',
             device: 'mobile',
-            func:propagateToIntro,
+            funcs: [propagateToIntro],
             callbacks: [incrementSubStep],
             options: ['mobile'],
             name: 'Create Mobile Intro Board',
@@ -194,12 +260,12 @@ const buildSteps = [
         nextAction: {
             type: 'next',
             device: 'both',
-            func: null, ///this will be a convert and sanitization action,
+            funcs: [null], ///this will be a convert and sanitization action,
             callbacks: [incrementStep],
             options: [],
             name: 'Finalize Project',
             description: 'Fix Missing Smart Objects, Convert any lingering Raster Layers or Text, and Warn the User if Anything Looks Amiss'
-        }
+        } 
     },
     {
         id: 5,
@@ -209,7 +275,7 @@ const buildSteps = [
         action: null,
         nextAction: {
             type: 'next',
-            func: null, ///this will be a convert and sanitization action,
+            funcs: [null], ///this will be a convert and sanitization action,
             options: ['mobile'],
             name: 'Move into Studio',
             description: 'Move the Project into Studio' //maybe one day this can be done via API?
@@ -254,7 +320,7 @@ function onSelect() {
     return;
   }    
   //check if selection is mixed types
-  const mixedTypes = current.some(item => item.kind !== current[0].kind);
+  const mixedTypes = current.some(item => item.kind === LayerKind.GROUP) && !current.every(item => item.kind === LayerKind.GROUP);
   // update our snapshot
   currentSelection = currentIds;
   //adjust UI to respond to selection
@@ -297,8 +363,8 @@ function toggleButtonDisable() {
     console.log('setting buttons to disabled:', !viableSelection);
     if (!viableSelection) {
       button.setAttribute('disabled', ''); // adds the flag
-      button.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-      button.style.color = 'rgba(255, 255, 255, 0.1)';
+      //button.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+      //button.style.color = 'rgba(255, 255, 255, 0.1)';
     } else {
       button.removeAttribute('disabled');  // clears the flag
       button.removeAttribute('style');
@@ -334,6 +400,12 @@ function toggleActionBar(mixedTypes = false, selection = null) {
   }
 }
 
+function rearrangeBoards() {
+    const boards = app.activeDocument.artboards;
+    boards.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+
 // --- Helper Function to Get Options ---
 function getValidTypes() {
     const validTypes = [];
@@ -352,11 +424,11 @@ async function runStep(type = 'next') {
     const buildStep = buildSteps[currentStep];
     const action = type === 'next' ? buildStep.nextAction : buildStep.action;
     try {
-        const result = await executeStepAction(action);
-        if(result.success) {
+        const results = await executeStepAction(action);
+        if(results.every(result => result.success)) {
             action.callbacks?.forEach(callback => callback(action));
         } else {
-            await core.showAlert(result.message);
+            await core.showAlert(results.find(result => !result.success).message);
         }
     } catch (error) {
         console.error('Error executing step action:', error);
@@ -365,17 +437,21 @@ async function runStep(type = 'next') {
 }
 
 async function executeStepAction(action) {
-    const {name, type, func, description, device} = action;
+    const {name, type, funcs, description, device} = action;
     action.step = getIntroSteps(device);
     console.log(`DEBUG: On ${type === 'substep' ? 'Substep' : 'Step'}: ${action.step+1}. User click initiated: ${name}, which will: ${description}`);
     try {
         console.log(`DEBUG: Action Payload:`, action);
-        const result = await func(action); 
+        const results =[];
+        await funcs?.forEach(async func => {
+            const result = await func(action); 
+            results.push(result);
+            if (!result.success && result.message) { 
+                await core.showAlert(result.message);
+            } 
+        });
         restoreFocus();
-        if (!result.success && result.message) { 
-            await core.showAlert(result.message);
-        } 
-        return result;
+        return results;
     } catch (err) {
         console.error(`Error calling ${name} action:`, err);
         const errorMessage = err.message || err.toString() || "Unknown error.";
@@ -620,6 +696,22 @@ action.addNotificationListener(
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM fully loaded, initializing");
     initializePanel();
+    console.log(window)
+    
+    // const mqls = [
+    //   {match: window.matchMedia('(prefers-color-scheme: dark)'), color: 'dark'},
+    //   {match: window.matchMedia('(prefers-color-scheme: darker)'), color: 'darker'},
+    //   {match: window.matchMedia('(prefers-color-scheme: light)'), color: 'light'},
+    //   {match: window.matchMedia('(prefers-color-scheme: lighter)'), color: 'lighter'}
+    // ];
+    // mqls.forEach(mql => mql.match.addEventListener('change', e => {
+    //   if(e.matches) {
+    //     console.log("DEBUG: Color scheme changed to: " + mql.color);
+    //     document.getElementById('theme').setAttribute('color', mql.color);
+    //   }
+    // }));
 });
+
+
 
 console.log("DEBUG: Script execution started. Waiting for DOMContentLoaded.");

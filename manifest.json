@@ -11,6 +11,24 @@
     {
       "type": "panel",
       "id": "mainPanel",
+      "icons": [
+        { 
+          "width": 23, 
+          "height": 23, 
+          "path": "icons/pluginIcon.png", 
+          "scale": [ 1, 2 ],
+          "theme": [ "dark", "darkest" ], 
+          "species": [ "generic" ] 
+        },
+        { 
+          "width": 23, 
+          "height": 23, 
+          "path": "icons/pluginIcon.png", 
+          "scale": [ 1, 2 ],
+          "theme": [ "lightest", "light" ], 
+          "species": [ "generic" ] 
+        }  
+      ],
       "label": {
         "default": "Studio Companion Redux"
       },
@@ -32,6 +50,24 @@
       }
     }
   ],
+  "icons": [
+    { 
+      "width": 23, 
+      "height": 23, 
+      "path": "icons/pluginIcon.png", 
+      "scale": [ 1, 2 ],
+      "theme": [ "dark", "darkest" ], 
+      "species": [ "generic" ] 
+    },
+    { 
+      "width": 23, 
+      "height": 23, 
+      "path": "icons/pluginIcon.png", 
+      "scale": [ 1, 2 ],
+      "theme": [ "lightest", "light" ], 
+      "species": [ "generic" ] 
+    }  
+  ],  
   "requiredPermissions": {
     "localFileSystem": "request",
     "network": {

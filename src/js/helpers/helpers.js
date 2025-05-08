@@ -258,7 +258,11 @@ async function showInputDialog(label, title, defaultValue = '', okText = 'OK', c
                 dialog.remove(); // Cleanup from DOM
             });
 
-            dialog.showModal();
+            const r = await dialog.uxpShowModal({
+                title: "Bulk Transformation",
+                resize: "none", // "both", "horizontal", "vertical"
+              });
+            //dialog.showModal();
             setTimeout(() => inputField.focus(), 50); // Delay focus slightly
 
         } catch (err) {
