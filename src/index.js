@@ -44,6 +44,7 @@ async function finalize() {
   await console.log('all done!');    
 }
 
+
 let buildElements;
 const pluginState = {
   currentMode: 'build',
