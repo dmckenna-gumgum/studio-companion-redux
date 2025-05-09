@@ -19,14 +19,14 @@ class SelectListener {
     destroy() {
         action.removeNotificationListener([{ event: "select" }],  this.selectHandler);
     }      
-    async selectHandler() {
+    async selectHandler(event) {
         const active = app.activeDocument.activeLayers;
         if (active.length === 0) {
             this.stopSelectionPoll();
-            this.callback?.(active);
+            this.callback?.(event, active);
         } else {
            this.startSelectionPoll();
-            this.callback?.(active);
+            this.callback?.(event, active);
         }
     }
 }

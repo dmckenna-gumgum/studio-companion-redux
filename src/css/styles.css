@@ -176,7 +176,37 @@ sp-button-group {
   margin-bottom: 0.5rem;
 }
 
+.plugin-filter-cluster {
+  padding: 0.5rem 0rem;
+}
 
+.plugin-tag {
+  margin: 0.125rem;
+}
+
+.plugin-tag--device {
+  --spectrum-tag-border-color: var(--spectrum-blue-background-color-default);
+  --spectrum-tag-content-color: var(--uxp-host-text-color);
+  --spectrum-tag-background-color: var(--spectrum-blue-background-color-default);
+  --spectrum-tag-border-color-hover: var(--spectrum-blue-background-color-default);
+  --spectrum-tag-background-color-hover: var( --spectrum-blue-background-color-default );
+  --spectrum-tag-content-color-hover: var( --uxp-host-text-color );
+  --spectrum-tag-border-color-active: var(--spectrum-blue-background-color-default);
+  --spectrum-tag-background-color-active: var( --spectrum-blue-background-color-default );
+  --spectrum-tag-content-color-active: var( --uxp-host-text-color );
+}
+
+.plugin-tag--state {
+  --spectrum-tag-border-color: var(--spectrum-celery-background-color-default);
+  --spectrum-tag-content-color: var(--uxp-host-text-color);
+  --spectrum-tag-background-color: var(--spectrum-celery-background-color-default);
+  --spectrum-tag-border-color-hover: var(--spectrum-celery-background-color-default);
+  --spectrum-tag-background-color-hover: var( --spectrum-celery-background-color-default );
+  --spectrum-tag-content-color-hover: var( --uxp-host-text-color );
+  --spectrum-tag-border-color-active: var(--spectrum-celery-background-color-default);
+  --spectrum-tag-background-color-active: var( --spectrum-celery-background-color-default );
+  --spectrum-tag-content-color-active: var( --uxp-host-text-color );
+}
 
 .plugin-option-note{
   font-size: var(--uxp-host-font-size-smaller);

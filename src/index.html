@@ -66,9 +66,7 @@
                     </div>
                     <div class="plugin-menu" id="editor-menu">
                         <div class="plugin-menu-section plugin-flex--no-grow"> 
-                            <div class="plugin-flex plugin-flex--flex-row">
-                                <h4 class="plugin-label">Editor Scope</h4>
-                            </div>
+                            <h4 class="plugin-label">Editor Scope</h4>
                             <div class="plugin-flex plugin-flex--flex-row plugin-flex--no-grow">
                                 <div class="plugin-control-cluster">
                                     <sp-field-label for="vertical">
@@ -89,11 +87,29 @@
                                         <sp-switch class="plugin-scope-filter" id="chkCollapsed" data-type="state" data-name="collapsed" data-filter="collapsed">Collapsed</sp-switch>
                                     </sp-field-group>
                                 </div>
-                            </div>                            
-                            <div>
-                                Current Scope: Editing Intro, Expanded Artboards for Desktop
-                            </div>
+                            </div> 
                             <small class="plugin-option-note">All unchecked = target everything</small>
+                        </div>
+                        <div class="plugin-menu-section plugin-flex--no-grow"> 
+                            <h4 class="plugin-label">Currently Editing...</h4>    
+                            <div>
+                                <div class="plugin-filter-cluster">
+                                    <sp-field-label for="vertical">
+                                        These sequences:
+                                    </sp-field-label>
+                                    <sp-tags id="stateFilters" class="plugin-filters plugin-state-filters">
+                                        <sp-tag class="plugin-tag plugin-tag--state">All Sequences</sp-tag>
+                                    </sp-tags>
+                                </div>
+                                <div class="plugin-filter-cluster">
+                                    <sp-field-label for="vertical">
+                                        For these devices:
+                                    </sp-field-label>
+                                    <sp-tags id="deviceFilters" class="plugin-filters plugin-device-filters">
+                                        <sp-tag class="plugin-tag plugin-tag--device">All Devices</sp-tag>
+                                    </sp-tags>
+                                </div>
+                            </div>
                         </div>
                         <div class="plugin-menu-section">
                             <div class="plugin-control-cluster">                                
@@ -103,14 +119,14 @@
                                         <sp-icon-layers slot="icon"></sp-icon-layers>
                                         Select Layers by Name
                                     </sp-button>
-                                    <sp-button variant="secondary" treatment="outline" id="btnLink">
+                                    <!-- <sp-button variant="secondary" treatment="outline" id="btnLink">
                                         <sp-icon-link slot="icon"></sp-icon-link>
                                         Link Layer by Name
                                     </sp-button>
                                     <sp-button variant="secondary" treatment="outline" id="btnUnlink">
                                         <sp-icon-unlink slot="icon"></sp-icon-unlink>
                                         Unlink Layer by Name
-                                    </sp-button>
+                                    </sp-button> -->
                                 </sp-button-group>
                             </div>
                             <div class="plugin-control-cluster">                              
@@ -124,10 +140,10 @@
                                         <sp-icon-wrench slot="icon"></sp-icon-wrench>
                                         Fill Missing Asset(s)
                                     </sp-button>
-                                    <sp-button variant="secondary" treatment="outline" id="btnDelete">
+                                    <!-- <sp-button variant="secondary" treatment="outline" id="btnDelete">
                                         <sp-icon-delete slot="icon"></sp-icon-delete>
                                         Purge Asset(s)
-                                    </sp-button>
+                                    </sp-button> -->
                                     <!---TBD - WILL SEARCH FOR MATCHING LAYER NAMES THAT DONT HAVE MATCHING LAYERKIND AND REPLACE THEM WITH A SHARED SMART OBJECT VERSION-->
                                     <sp-button variant="secondary" treatment="outline" id="btnFixSmart">
                                         <sp-icon-education slot="icon"></sp-icon-education>
@@ -186,6 +202,15 @@
             </div>
             <sp-action-bar id="action-bar" class="plugin-action-bar" emphasized>
                 <p id="feedback" class="feedback-area">Loading...</p>
+                
+                <sp-action-button slot="buttons" id="btnLink" label="Link">                    
+                    <sp-icon-link slot="icon"></sp-icon-link>
+                    Link
+                </sp-action-button>
+                <sp-action-button slot="buttons" id="btnUnlink" label="Unlink">                    
+                    <sp-icon-unlink slot="icon"></sp-icon-unlink>
+                    Unlink
+                </sp-action-button>
                 <sp-action-button slot="buttons" id="btnScale" label="Scale">                    
                     <sp-icon-maximize slot="icon"></sp-icon-maximize>
                     Scale

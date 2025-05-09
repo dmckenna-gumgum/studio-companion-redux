@@ -33,6 +33,7 @@ import '@swc-uxp-wrappers/field-label/sp-field-label.js';
 import '@swc-uxp-wrappers/textfield/sp-textfield.js';
 import '@swc-uxp-wrappers/dialog/sp-dialog.js';
 import '@swc-uxp-wrappers/divider/sp-divider.js';
+import '@swc-uxp-wrappers/tags/sp-tag.js';
 
 import Editor from './editor.js';
 import Builder from './builder.js';

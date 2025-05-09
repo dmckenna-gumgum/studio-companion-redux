@@ -96,7 +96,7 @@ async function selectLayersByName() {
         if (result.success) {
             const message = `Selected ${result.count} layers matching the name(s) of the initial selection.`;
             console.log(`(Action) ${message}`);
-            return { success: true, count: result.count, message: message };
+            return { success: true, count: result.count, message: message, layers: app.activeDocument.activeLayers };
         } else {
             // Use the message from the modal if available, otherwise default
             const message = result.message || "An unexpected issue occurred during selection."; 

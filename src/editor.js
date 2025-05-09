@@ -32,6 +32,9 @@ const Editor = (() => {
         }
     }
 
+    const linkSelectedLayers = async () => {
+    }
+
     const _state = {
         element: getEl('#editor-menu'),
         behaviors: [
@@ -39,41 +42,46 @@ const Editor = (() => {
                 description: "Select All Layers With Name",
                 name: "Select",
                 action: selectLayersByName,
+                actionReturns: 'proxyArray: all active layers',
                 buttonId: 'btnSelect',
                 buttonElement: document.querySelector('#btnSelect'),
                 options: [],
-                callback: handleLayerSelect
-            },
-            {
-                description: "Link All Layers With Name",
-                name: "Link",
-                action: linkLayersByName,
-                buttonId: 'btnLink',
-                buttonElement: document.querySelector('#btnLink'),
-                options: [],
                 callback: null
             },
-            {
-                description: "Unlink All Layers With Name",
-                name: "Unlink",
-                action: unlinkLayersByName,
-                buttonId: 'btnUnlink',
-                buttonElement: document.querySelector('#btnUnlink'),
-                options: [],
-                callback: null
-            },
-            {
-                description: "Delete All Layers With Name",
-                name: "Delete",
-                action: deleteLayersByName,
-                buttonId: 'btnDelete',
-                buttonElement: document.querySelector('#btnDelete'),
-                options: [],
-                callback: null
-            },
+            // {
+            //     description: "Link All Layers With Name",
+            //     name: "Link",
+            //     actionReturns: 'proxyArray: linked layer selection',
+            //     action: linkLayersByName,
+            //     buttonId: 'btnLink',
+            //     buttonElement: document.querySelector('#btnLink'),
+            //     options: [],
+            //     callback: null
+            // },
+            // {
+            //     description: "Unlink All Layers With Name",
+            //     name: "Unlink",
+            //     actionReturns: 'proxyArray: unlinked layer selection',
+            //     action: unlinkLayersByName,
+            //     buttonId: 'btnUnlink',
+            //     buttonElement: document.querySelector('#btnUnlink'),
+            //     options: [],
+            //     callback: null
+            // },
+            // {
+            //     description: "Delete All Layers With Name",
+            //     name: "Delete",
+            //     actionReturns: 'proxyArray: empty layer selection',
+            //     action: deleteLayersByName,
+            //     buttonId: 'btnDelete',
+            //     buttonElement: document.querySelector('#btnDelete'),
+            //     options: [],
+            //     callback: null
+            // },
             {
                 description: "Propagate All Layers",
                 name: "Propagate",
+                actionReturns: 'proxyArray: all new layers including the selection',
                 action: propagateLayers,
                 buttonId: 'btnDuplicate',
                 buttonElement: document.querySelector('#btnDuplicate'),
@@ -83,10 +91,20 @@ const Editor = (() => {
             {
                 description: "Propagate Missing Layers",
                 name: "PropagateMissing",
+                actionReturns: 'proxyArray: all matching layers including selection',
                 action: propagateLayers,
                 buttonId: 'btnMissing',
                 buttonElement: document.querySelector('#btnMissing'),
                 options: [true],
+                callback: null
+            },
+            {
+                description: "Link Selected Layers",
+                name: "LinkSelected",
+                action: linkSelectedLayers,
+                buttonId: 'btnLink',
+                buttonElement: document.querySelector('#btnLink'),
+                options: [],
                 callback: null
             },
             {
@@ -119,6 +137,10 @@ const Editor = (() => {
         ],
         buttonsActive: false,
         filterSwitchElements: getEls('.plugin-scope-filter'),
+        filterTagContainers: {
+            state: getEl('#stateFilters'),
+            device: getEl('#deviceFilters')
+        },
         scopeFilters: [],
         scopeMatchRule: 'all',
         actionBar: {
@@ -148,21 +170,33 @@ const Editor = (() => {
         _eventListeners.splice(_eventListeners.indexOf(eventListener), 1);
     }
 
-    const getSelectionViability = (selection) => {
+    const getSelectionViability = (layers) => {
+        console.log(layers);
         ///if some selected layers are groups, BUT not all of them are groups, then it's not viable - We don't want to be applying transformations
         /// to individual layers and artboards on the same action because it'll produce weird results.
-        return !selection.some(item => item.kind === LayerKind.GROUP) && selection.every(item => item.kind !== LayerKind.GROUP)
+        return !layers.some(item => item.kind === LayerKind.GROUP) && layers.every(item => item.kind !== LayerKind.GROUP)
     }
 
     const setCurrentSelection = (selection) => {
-        const currentSelection = getCurrentSelection();
-        const isIdentical = proxyArraysEqual(selection, currentSelection.layers);
-        const alreadyIdentical = isIdentical && currentSelection.identical;
-        if(alreadyIdentical) return currentSelection;
+        const _sel = {...getCurrentSelection()};
+        ///if empty selection reset to default
+        if(selection.length === 0) {
+            _sel.viable = true;
+            _sel.identical = false;
+            _sel.layers = [];
+            state.currentSelection = _sel;
+            return state.currentSelection;
+        }
 
-        const _sel = {...currentSelection};
+        //check if the new selection is identical to the existing selection
+        const isIdentical = proxyArraysEqual(selection, _sel.layers);
+
+        //if selection is already set to identical to current selection, return current selection without processing further.
+        const alreadyIdentical = isIdentical && _sel.identical;
+        if(alreadyIdentical) return _sel;
+
+        ///otherwise either set to identical, or update viability and layers. Then return the current selection
         _sel.identical = isIdentical; 
-
         if(_sel.identical) {
             state.currentSelection = _sel;
             return state.currentSelection;
@@ -170,20 +204,20 @@ const Editor = (() => {
             _sel.viable = getSelectionViability(selection);
             _sel.layers = selection;
             state.currentSelection = _sel;
-            return editorState.currentSelection;
+            return state.currentSelection;
         }
     }   
 
-    const setButtonState = (state) => {
-        return editorState.buttonsActive = state;
+    const setButtonState = (buttonsActive) => {
+        return state.buttonsActive = buttonsActive;
     }
 
     const getButtonState = () => {
-        return editorState.buttonsActive;
+        return state.buttonsActive;
     }
 
     const getCurrentSelection = () => {
-        return editorState.currentSelection;
+        return state.currentSelection;
     } 
     
     function changeFilters(dataset, add) {
@@ -201,7 +235,6 @@ const Editor = (() => {
                 state.scopeFilters = newScopeFilters;
             }
         }
-        console.log('filters', state.scopeFilters);
         return state.scopeFilters;
     }
 
@@ -209,61 +242,82 @@ const Editor = (() => {
         return state.scopeFilters;
     }
     // --- Layer Selection Handlers --- 
-    function handleLayerSelect(selection = []) {
-        if(selection.length === 0) return toggleActionBar();
+    function handleLayerSelect(event, selection = []) {
         const newSelection = setCurrentSelection(selection);
+        console.log(newSelection)
         toggleActionBar(newSelection);
-        toggleButtonDisable(newSelection.viable);
+        toggleButtons(newSelection.viable);
     }
 
     function updateFilterUI() {
         const deviceFilters = state.scopeFilters.filter(f => f.type === 'device');
         const stateFilters = state.scopeFilters.filter(f => f.type === 'state');
-        deviceFilters.forEach(f => {
-            ///draw device filter tags
-            console.log(`add ${f.type} tag for ${f.name}`)
-        });
-        stateFilters.forEach(f => {
-            ///draw state filter tags
-            console.log(`add ${f.type} tag for ${f.name}`)
-        });
+        const deviceFilterContainer = state.filterTagContainers.device;
+        const stateFilterContainer = state.filterTagContainers.state;
+        deviceFilterContainer.innerHTML = '';
+        stateFilterContainer.innerHTML = '';
+        if(deviceFilters.length === 0) {
+            const tag = createTag('device', 'All Devices');
+            deviceFilterContainer.appendChild(tag);
+        } else {
+            deviceFilters.forEach(f => {
+                const tag = createTag(f.type, f.name);
+                deviceFilterContainer.appendChild(tag);
+            });
+        }
+        if(stateFilters.length === 0) {
+            const tag = createTag('state', 'All Sequences');
+            stateFilterContainer.appendChild(tag);
+        } else {            
+            stateFilters.forEach(f => {
+                const tag = createTag(f.type, f.name);
+                stateFilterContainer.appendChild(tag);
+            });
+        }
     }
     
 
+
+    function createTag(type, name) {
+        const tag = document.createElement('sp-tag');
+        tag.classList.add('plugin-tag', `plugin-tag--${type}`);
+        tag.textContent = name;
+        return tag;
+    }
+
     // --- UI Feedback Handlers --- 
-    function toggleButtonDisable(enable = getCurrentSelection().viable) {
+    function toggleButtons(enable = getCurrentSelection().viable) {
+        console.log('enable buttons?:', enable)
         const buttonState = getButtonState();
+        console.log('button state:', buttonState)
         if(enable === buttonState) return;
-        setButtonState(enable);
+        const newState = setButtonState(enable);
         state.behaviors.forEach(behavior => {
-            enable ? behavior.buttonElement.removeAttribute('disabled') : behavior.buttonElement.setAttribute('disabled', '');
-            enable ? behavior.buttonElement.setAttribute('style', 'border-color: rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.1);') : behavior.buttonElement.removeAttribute('style');
+            if(!newState) {
+                behavior.buttonElement.setAttribute('disabled', true);
+                behavior.buttonElement.style.color = 'rgba(255, 255, 255, 0.1)';
+            } else {
+                behavior.buttonElement.removeAttribute('disabled');  // clears the flag
+                behavior.buttonElement.removeAttribute('style');
+            }
         });
     }
 
     function toggleActionBar(selection = null) {
-        if(!selection) return state.actionBar.element.removeAttribute('open');    
+        if(!selection || selection.layers.length === 0) return state.actionBar.element.removeAttribute('open');    
         state.actionBar.element.setAttribute('open', true);
         if(!selection.viable) {
             state.actionBar.feedbackElement.textContent = `You've currently selected a mix of artboards and layers. Performing bulk actions on a mix of artboards and layers is not supported`;
             state.actionBar.element.removeAttribute('emphasized');
-            state.behaviors.forEach(behavior => {
-                //behavior.buttonElement.setAttribute('disabled', true);
-                behavior.buttonElement.style.color = 'rgba(255, 255, 255, 0.1)';
-            });
         } else {
-            editorState.actionBar.feedbackElement.textContent = `${selection.layers.length} layers selected`;
-            editorState.actionBar.element.setAttribute('emphasized', true);
-            editorState.behaviors.forEach(behavior => {
-                behavior.buttonElement.removeAttribute('disabled');  // clears the flag
-                behavior.buttonElement.removeAttribute('style');
-            });
+            state.actionBar.feedbackElement.textContent = `${selection.layers.length} layers selected`;
+            state.actionBar.element.setAttribute('emphasized', true);
         }
     }   
 
     // --- Editor Event Handlers --- 
     function handleEditorAction(event, behavior) {
-        console.log('handleEditorAction', event, behavior);
+        console.log('handleEditorAction', event, behavior); 
         // console.log(`executing ${behavior.name} action...`);
         setTimeout(async () => {
             try {
@@ -273,7 +327,7 @@ const Editor = (() => {
                 const result = await behavior.action(validTypes, ...behavior.options); 
                 console.log(`DEBUG: Result from ${behavior.name} action:`, result);
                 restoreFocus();
-                behavior.callback?.(result, behavior);
+                behavior.callback?.(result.layers);
                 if (!result.success && result.message) { 
                     await core.showAlert(result.message);
                 } 
