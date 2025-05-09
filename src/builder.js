@@ -5,10 +5,27 @@ import { propagateToIntro } from "./js/buildActions/propagateToIntro.js";
 import { revealAndPropagateToRestState } from "./js/buildActions/revealAndPropagateToRestState.js";
 import { readyPositioningForIntros } from "./js/buildActions/readyPositioningForIntros.js";
 const { core } = require("photoshop");
+let _onUpdateCallback = null;
 const Builder = (() => {
 
+    const builderStateHandler = {
+        set: function(target, property, value) {
+            target[property] = value;
+            _notifyStateChange();
+            return true;
+        }
+    };
 
-    const builder = {
+    function _notifyStateChange() {
+        if (_onUpdateCallback) {
+            _onUpdateCallback({
+                panel: 'builder',
+                state: builderState
+            });
+        }
+    }
+    
+    const _builderState = {
         currentStep: 0,
         buttonsActive: false,
         stepButtons: [
@@ -176,8 +193,10 @@ const Builder = (() => {
         }
     }   
 
+    
+    const builderState = new Proxy(_builderState, builderStateHandler);
     //////everything here needs to be sorted into the plugin object eventually
-    const buildState = {
+    const legacyBuilderState = {
         introSteps: {
             desktop: 0,
             mobile: 0,
@@ -186,28 +205,28 @@ const Builder = (() => {
 
     const getIntroSteps = (device) => {
         ///these are temporary until i'm properly pushing created intro boards into the config above, then i can use length of those arrays rather than a separate number 
-        return buildState.introSteps[device];
+        return legacyBuilderState.introSteps[device];
     }
     
     const setIntroSteps = (device, step) => {
         ///these are temporary until i'm properly pushing created intro boards into the config above, then i can use length of those arrays rather than a separate number 
         console.log('setIntroSteps', device, step);
-        return buildState.introSteps[device] = step;
+        return legacyBuilderState.introSteps[device] = step;
     }
 
     const setBuildStep = (step) => {
-        return builder.currentStep = step;
+        return builderState.currentStep = step;
     }
 
     const getBuildStep = () => {
-        return builder.currentStep;
+        return builderState.currentStep;
     }
    //////////////////////////////////////
     ////////////BUILD ACTIONS/////////////
     //////////////////////////////////////
     async function runStep(type = 'next') {  
         const currentStep = getBuildStep();
-        const buildStep = builder.buildSteps[currentStep];
+        const buildStep = builderState.buildSteps[currentStep];
         const action = type === 'next' ? buildStep.nextAction : buildStep.action;
         try {
             const results = await executeStepAction(action);
@@ -254,34 +273,46 @@ const Builder = (() => {
     } 
 
     function incrementStep(action) {   
-        const currentStep = setBuildStep(Math.min(getBuildStep()+1, builder.buildSteps.length-1));
+        const currentStep = setBuildStep(Math.min(getBuildStep()+1, builderState.buildSteps.length-1));
         console.log('currentStep', currentStep);
-        const buildStep = builder.buildSteps[currentStep];
+        const buildStep = builderState.buildSteps[currentStep];
         console.log(`DEBUG: Incrementing To Main Step: ${currentStep+1}, named: ${buildStep.name}`); 
         updateBuildInterface(buildStep);
     }
 
     function updateBuildInterface(buildStep) {
         const currentStep = getBuildStep();
-        builder.infoElements.stepNumber.textContent = `Step ${currentStep+1}:`;
-        builder.infoElements.stepName.textContent = buildStep.name;
-        builder.infoElements.stepText.textContent = buildStep.directions;
-        const progressWidth = Math.max(5, currentStep/(builder.buildSteps.length-1)*100);
-        builder.infoElements.progressBarFill.style.width = `${progressWidth}%`;  
+        builderState.infoElements.stepNumber.textContent = `Step ${currentStep+1}:`;
+        builderState.infoElements.stepName.textContent = buildStep.name;
+        builderState.infoElements.stepText.textContent = buildStep.directions;
+        const progressWidth = Math.max(5, currentStep/(builderState.buildSteps.length-1)*100);
+        builderState.infoElements.progressBarFill.style.width = `${progressWidth}%`;  
         if (currentStep === 4) {
-        builder.infoElements.nextButton.textContent = 'Finish';
+        builderState.infoElements.nextButton.textContent = 'Finish';
         }
         if(buildStep.action !== null) {
-            builder.infoElements.subUi.classList.add('-show');
+            builderState.infoElements.subUi.classList.add('-show');
         } else {
-            builder.infoElements.subUi.classList.remove('-show');
+            builderState.infoElements.subUi.classList.remove('-show');
         }
     }
 
-   const initializeSection = () => {
-        builder.stepButtons.forEach(button => {
+    function _notifyStateChange() {
+        if (_onUpdateCallback) {
+            _onUpdateCallback({
+                panel: 'builder',
+                state: {...builderState}
+            });
+        }
+    }
+
+   const initializeSection = (onUpdate) => {
+
+        _onUpdateCallback = onUpdate;
+
+        builderState.stepButtons.forEach(button => {
             button.element.addEventListener('click', async (event) => { await button.func(button.options[0]); });
-        }) 
+        });
     }
     return { initializeSection };
 })();

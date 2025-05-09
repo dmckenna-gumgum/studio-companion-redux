@@ -11,9 +11,7 @@ async function getPSTheme() {
             _options: { dialogOptions: "dontDisplay" },
         }],
     {});
-    console.log(result);
     const brightness = result[0].kuiBrightnessLevel._value;
-    console.log(brightness);
     return {
         kPanelBrightnessDarkGray: "darkest",
         kPanelBrightnessMediumGray:  "darkest",

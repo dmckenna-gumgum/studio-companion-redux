@@ -66,15 +66,17 @@
                     </div>
                     <div class="plugin-menu" id="editor-menu">
                         <div class="plugin-menu-section plugin-flex--no-grow"> 
-                            <h4 class="plugin-label">Editor Scope</h4>
+                            <div class="plugin-flex plugin-flex--flex-row">
+                                <h4 class="plugin-label">Editor Scope</h4>
+                            </div>
                             <div class="plugin-flex plugin-flex--flex-row plugin-flex--no-grow">
                                 <div class="plugin-control-cluster">
                                     <sp-field-label for="vertical">
                                         Devices
                                     </sp-field-label>
                                     <sp-field-group vertical label="Devices">
-                                        <sp-switch class="plugin-scope-filter" id="chkDesktop" data-filter=":dt">Desktop</sp-switch>
-                                        <sp-switch class="plugin-scope-filter" id="chkMobile" data-filter=":mb">Mobile</sp-switch>
+                                        <sp-switch class="plugin-scope-filter" id="chkDesktop" data-type="device" data-name="desktop" data-filter=":dt">Desktop</sp-switch>
+                                        <sp-switch class="plugin-scope-filter" id="chkMobile" data-type="device" data-name="mobile" data-filter=":mb">Mobile</sp-switch>
                                     </sp-field-group>
                                 </div>
                                 <div class="plugin-control-cluster">
@@ -82,13 +84,15 @@
                                         States
                                     </sp-field-label>
                                     <sp-field-group vertical label="States">
-                                        <sp-switch class="plugin-scope-filter" id="chkIntro" data-filter="intro">Introduction</sp-switch>
-                                        <sp-switch class="plugin-scope-filter" id="chkExpanded" data-filter="expanded">Expanded</sp-switch>
-                                        <sp-switch class="plugin-scope-filter" id="chkCollapsed" data-filter="collapsed">Collapsed</sp-switch>
+                                        <sp-switch class="plugin-scope-filter" id="chkIntro" data-type="state" data-name="intro" data-filter="intro">Introduction</sp-switch>
+                                        <sp-switch class="plugin-scope-filter" id="chkExpanded" data-type="state" data-name="expanded" data-filter="expanded">Expanded</sp-switch>
+                                        <sp-switch class="plugin-scope-filter" id="chkCollapsed" data-type="state" data-name="collapsed" data-filter="collapsed">Collapsed</sp-switch>
                                     </sp-field-group>
                                 </div>
+                            </div>                            
+                            <div>
+                                Current Scope: Editing Intro, Expanded Artboards for Desktop
                             </div>
-                            <sp-icon name="ui:Arrow100"></sp-icon>
                             <small class="plugin-option-note">All unchecked = target everything</small>
                         </div>
                         <div class="plugin-menu-section">
@@ -124,9 +128,15 @@
                                         <sp-icon-delete slot="icon"></sp-icon-delete>
                                         Purge Asset(s)
                                     </sp-button>
+                                    <!---TBD - WILL SEARCH FOR MATCHING LAYER NAMES THAT DONT HAVE MATCHING LAYERKIND AND REPLACE THEM WITH A SHARED SMART OBJECT VERSION-->
                                     <sp-button variant="secondary" treatment="outline" id="btnFixSmart">
                                         <sp-icon-education slot="icon"></sp-icon-education>
                                         Replace With Smart Object
+                                    </sp-button>
+                                    <!---TBD - WILL CREATE NEW SMART OBJECT VIA COPY OF ANY SMART OBJECT WITH LINKED SIBLINGS IN A GIVEN ARTBOARD-->
+                                    <sp-button variant="secondary" treatment="outline" id="btnFixDuplicate">
+                                        <sp-icon-wrench slot="icon"></sp-icon-wrench>
+                                        Fix Duplicate Smart Objects
                                     </sp-button>
                                 </sp-button-group>
                             </div>

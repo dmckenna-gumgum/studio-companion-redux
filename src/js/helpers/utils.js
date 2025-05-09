@@ -33,8 +33,22 @@ function getEls(selector) {
     return document.querySelectorAll(selector);
 }  
 
+function proxyArraysEqual(a, b) {
+    // 1) If they’re literally the same object, they’re equal
+    if (a === b) return true;
+  
+    // 2) Both must be array-like and same length
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
+        return false;
+    }
+  
+    // 3) Compare each entry to check doc and layer ids match
+    return a.every((elementA, i) => elementA._docId === b[i]._docId && elementA._id === b[i]._id);
+}
+
 export {
     getEl,
     getEls,
-    restoreFocus
+    restoreFocus,
+    proxyArraysEqual
 };

@@ -43,18 +43,18 @@ import { getPSTheme } from "./js/helpers/themeSetter.js";
 import { getEl } from "./js/helpers/utils.js";
 
 
-const { core, constants } = require("photoshop");
-const { LayerKind } = constants;
-
 const Plugin = (() => {
     // UXP modules
     console.log('loading plugin');
+    //eventually add file load detection, which checks the activeDocument for a number of indicators
+    //which will tell it what type of creative we're working on. Then it will set mode and pull the correct
+    //config schema from creativeConfigs
     const mode = 'velocity';
     const creativeState = {
         ...creativeConfigs.find(config => config.name === mode)
     };
 
-    const plugin = {
+    const pluginState = {
         currentMode: 'build',
         sections: {
             nav: {
@@ -67,11 +67,12 @@ const Plugin = (() => {
         }
     }
 
-    const {nav} = plugin.sections; 
+    const {nav} = pluginState.sections; 
 
     function setActiveMenu(event) {
-        plugin.currentMode = event.target.value;
-        nav.targetElement.setAttribute(nav.activeAttribute, plugin.currentMode);
+        ///shallow change so no copy needed for now. 
+        pluginState.currentMode = event.target.value;
+        nav.targetElement.setAttribute(nav.activeAttribute, pluginState.currentMode);
     }
     
     async function applyTheme() {
@@ -79,16 +80,25 @@ const Plugin = (() => {
         document.getElementById('theme').setAttribute("color", themeValue);
     }
 
+    const handlePluginStateChange = (params = {panel: null, state: null}) => {
+        if(!params.panel || !params.state) return;
+        const currentSections = {...pluginState.sections}
+        currentSections[params.panel] = {...params.state};
+        pluginState.sections = currentSections;
+        console.log('pluginStateChange:', pluginState);
+    }
+
     // --- Initialization ---
     const initializePanel = () => {
-        Editor.initializeSection();
-        Builder.initializeSection();
+        Editor.initializeSection(handlePluginStateChange);
+        Builder.initializeSection(handlePluginStateChange);
         //Assign Event Listeners
         nav.element.addEventListener('change', setActiveMenu);
         applyTheme();
+        document.theme.onUpdated.addListener(applyTheme);  
     }
 
-    return { initializePanel }
+    return { initializePanel, pluginState }
 })();
 
 export default Plugin;
