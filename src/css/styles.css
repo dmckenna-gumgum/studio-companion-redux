@@ -1,8 +1,8 @@
 /* Main Styles for Creative Studio Companion */
 :root {
-  /* Plugin panel background / text */
-  --plugin-bg: var(--uxp-host-background-color);
-  --plugin-text: var(--uxp-host-text-color);
+  /* --spectrum-neutral-content-color-default: var(--uxp-host-text-color);
+  --spectrum-neutral-content-color-hover: var(--uxp-host-text-color);
+  --spectrum-fieldlabel-color: var(--uxp-host-text-color); */
 }
 
 body, html, sp-theme {
@@ -10,16 +10,76 @@ body, html, sp-theme {
   padding: 0;
   height: 100%;
   width: 100%;
+  background-color: var(--uxp-host-background-color);
+  color: var(--uxp-host-text-color);
+  border-color: var(--uxp-host-border-color);
+  font-size: var(--uxp-host-font-size);
+
+}
+/*
+sp-button {  
+  --spectrum-button-background-color-default: var( --uxp-host-background-color );
+  --spectrum-button-background-color-hover: var( --uxp-host-widget-hover-background-color );
+  --spectrum-button-border-color-default: var( --uxp-host-border-color );
+  --spectrum-button-border-color-hover: var( ---uxp-host-widget-hover-border-color );
+  --spectrum-button-border-color-down: var( --system-spectrum-button-secondary-outline-border-color-down );
+  --spectrum-button-border-color-focus: var( --system-spectrum-button-secondary-outline-border-color-focus );
+  --spectrum-button-content-color-default: var( --uxp-host-text-color);
+  --spectrum-button-content-color-hover: var( --uxp-host-widget-hover-text-color );
+  font-weight: var(--spectrum-regular-font-weight);
 }
 
+sp-field-label {
+  color: var(--uxp-host-text-color);
+}
+*/
+sp-sidenav {
+  --spectrum-sidenav-content-color-default:var(--uxp-host-text-color);
+  --spectrum-sidenav-content-color-hover:var(--uxp-host-link-hover-text-color);
+  --spectrum-sidenav-content-color-default-selected: var(--uxp-host-text-color);
+  --spectrum-sidenav-content-color-hover-selected: var( --uxp-host-link-hover-text-color );
+  --spectrum-sidenav-background-hover: var(--uxp-host-widget-hover-background-color);
+  --spectrum-sidenav-item-background-down: var(--uxp-host-border-color);
+  --spectrum-sidenav-item-background-default-selected: var(--spectrum-informative-background-color-default);
+  --spectrum-sidenav-background-hover-selected: var(--uxp-host-link-text-color);
+  --spectrum-sidenav-item-background-down-selected: var(--uxp-host-border-color);
+  --spectrum-sidenav-background-key-focus-selected: var(--uxp-host-border-color);
+  --spectrum-sidenav-header-color: var(--uxp-host-text-color);
+}
+
+/*
+sp-switch {
+  --spectrum-switch-label-color-default: var( --uxp-host-text-color );
+  --spectrum-switch-label-color-hover: var( --uxp-host-widget-hover-text-color );
+  --spectrum-switch-background-color: var(--uxp-host-border-color);
+  --spectrum-switch-background-color-selected-default: var( --uxp-host-text-color );
+  --spectrum-switch-handle-border-color-disabled: var( --spectrum-disabled-content-color );
+}
+
+sp-field-label {
+
+}
+*/
+sp-dialog {
+  padding: 0rem;
+  color: var(--uxp-host-text-color);
+  --spectrum-fieldlabel-color: var(--uxp-host-text-color);
+}
+
+sp-switch {
+margin: 0.25rem 0;
+}
+
+sp-button-group {
+  display: flex;
+  justify-content: stretch;
+}
 
 .plugin-container {
     display: flex;
     flex-direction: column;
     justify-content: stretch;
     height: 100%;
-    background-color: var(--plugin-bg);
-    color: var(--plugin-text);
 }
 
 .plugin-action-bar {
@@ -35,7 +95,7 @@ body, html, sp-theme {
     align-items: center;
     justify-content: space-between;
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid #545454;
+    border-bottom: 1px solid var(--uxp-host-border-color);
     flex: 0 1 auto;
 }
 
@@ -58,8 +118,7 @@ body, html, sp-theme {
 .plugin-nav {
     width: 200px;
     height: 100%;
-    border-right: 1px solid #545454;
-    box-shadow: 0px 1px 4px rgba(0,0,0,0.5);
+    border-right: 1px solid var(--uxp-host-border-color);
 }
 
 .plugin-sidenav {
@@ -76,7 +135,7 @@ body, html, sp-theme {
 
 .plugin-menu-section {
     padding: 1rem 2rem;
-    border-right: 1px solid #545454;
+    border-right: 1px solid var(--uxp-host-border-color);
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -117,23 +176,11 @@ body, html, sp-theme {
   margin-bottom: 0.5rem;
 }
 
-sp-switch {
-  margin: 0.25rem 0;
-}
 
 
 .plugin-option-note{
   font-size: var(--uxp-host-font-size-smaller);
   flex: 0 1 auto;
-}
-
-sp-button-group {
-  display: flex;
-  justify-content: stretch;
-}
-
-sp-button-group > sp-button {
-  /* flex: 1; */
 }
 
 .plugin-flex {
@@ -183,16 +230,16 @@ sp-button-group > sp-button {
 
 .plugin-progress-bar {
   height: 0.5rem;
-  background-color: #545454;
+  background-color: var( --uxp-host-border-color );
   
   color: var(--plugin-text);
-  border-radius: 0.25rem;
+  border-radius: 0.25rem; 
   overflow: hidden;
 }
 
 .plugin-progress-bar-fill {
   height: 100%;
-  background-color: #54A3F6;
+  background-color: var(--spectrum-informative-background-color-default);
   width: 5%;
 }
 
@@ -242,12 +289,7 @@ sp-button-group > sp-button {
   padding: 0rem;
   height: 200px;
   width: 350px;
-  color: var(--plugin-text);
-}
-
-sp-dialog {
-    padding: 0rem;
-    color: var(--plugin-text);
+  color: var(--uxp-host-text-color);
 }
 
 .plugin-dialog-menu {
@@ -259,8 +301,6 @@ sp-dialog {
 }
 
 .plugin-dialog-label {
-    font-size: var(--uxp-host-font-size-larger);
-    color: var(--plugin-text);
 }
 
 .plugin-dialog-input-container {
