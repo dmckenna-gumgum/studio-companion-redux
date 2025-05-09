@@ -34,14 +34,17 @@ import '@swc-uxp-wrappers/textfield/sp-textfield.js';
 import '@swc-uxp-wrappers/dialog/sp-dialog.js';
 import '@swc-uxp-wrappers/divider/sp-divider.js';
 
-import Editor from './js/sections/editor.js';
-import Builder from './js/sections/builder.js';
+import Editor from './editor.js';
+import Builder from './builder.js';
 
 // Configurations and Constants
 import { creativeConfigs } from "./js/constants/creativeConfigs.js";
 import { getPSTheme } from "./js/helpers/themeSetter.js";
 import { getEl } from "./js/helpers/utils.js";
 
+
+const { core, constants } = require("photoshop");
+const { LayerKind } = constants;
 
 const Plugin = (() => {
     // UXP modules

@@ -1,12 +1,12 @@
-import { getEl, getEls, restoreFocus } from "../helpers/utils.js";
-import { selectLayersByName } from "../actions/selectLayersByName.js";
-import { linkLayersByName } from "../actions/linkLayersByName.js";
-import { unlinkLayersByName } from "../actions/unlinkLayersByName.js";
-import { deleteLayersByName } from "../actions/deleteLayersByName.js";
-import { propagateLayers } from "../actions/propagateLayers.js";
-import { transformLayersIndividually } from "../actions/transformLayersIndividually.js";
-import { deleteSelectedLayers } from "../actions/deleteSelectedLayers.js";
-import { SelectListener } from "../actions/SelectListener.js";
+import { getEl, getEls, restoreFocus } from "./js/helpers/utils.js";
+import { selectLayersByName } from "./js/actions/selectLayersByName.js";
+import { linkLayersByName } from "./js/actions/linkLayersByName.js";
+import { unlinkLayersByName } from "./js/actions/unlinkLayersByName.js";
+import { deleteLayersByName } from "./js/actions/deleteLayersByName.js";
+import { propagateLayers } from "./js/actions/propagateLayers.js";
+import { transformLayersIndividually } from "./js/actions/transformLayersIndividually.js";
+import { deleteSelectedLayers } from "./js/actions/deleteSelectedLayers.js";
+import { SelectListener } from "./js/actions/SelectListener.js";
 
 
 const { core, constants } = require("photoshop");

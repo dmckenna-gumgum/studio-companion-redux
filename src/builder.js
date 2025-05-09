@@ -1,15 +1,13 @@
 // Assistant Step Actions
-import { getEl, restoreFocus } from "../helpers/utils.js";
-import { normalizeAndPropagateRestStates } from "../buildActions/propagateRestState.js";
-import { propagateToIntro } from "../buildActions/propagateToIntro.js";
-import { revealAndPropagateToRestState } from "../buildActions/revealAndPropagateToRestState.js";
-import { readyPositioningForIntros } from "../buildActions/readyPositioningForIntros.js";
+import { getEl, restoreFocus } from "./js/helpers/utils.js";
+import { normalizeAndPropagateRestStates } from "./js/buildActions/propagateRestState.js";
+import { propagateToIntro } from "./js/buildActions/propagateToIntro.js";
+import { revealAndPropagateToRestState } from "./js/buildActions/revealAndPropagateToRestState.js";
+import { readyPositioningForIntros } from "./js/buildActions/readyPositioningForIntros.js";
 const { core } = require("photoshop");
-console.log('core loaded', core);
 const Builder = (() => {
 
 
-    
     const builder = {
         currentStep: 0,
         buttonsActive: false,
