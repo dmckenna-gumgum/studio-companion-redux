@@ -8,7 +8,7 @@
 <body>
     
     <script src="main.bundle.js"></script>
-    <sp-theme id="theme" system="express" scale="medium" global>
+    <sp-theme id="theme" system="express" color="dark"scale="medium" global>
         <div class="plugin-container">
             <div class="plugin-header">
                 <h2 class="plugin-title">Velocity: Editor</h3>
@@ -65,7 +65,9 @@
                         </div>
                     </div>
                     <div class="plugin-menu" id="editor-menu">
-                        <div class="plugin-menu-section plugin-flex--no-grow"> 
+                        <div class="plugin-menu-section plugin-flex--no-grow" style="display: none;"> 
+                            <!-- LEGACY FILTER TOGGLES - KEEPIGN THIS IN CASE I WANT TO REVERT-->
+                            <!--
                             <h4 class="plugin-label">Editor Scope</h4>
                             <div class="plugin-flex plugin-flex--flex-row plugin-flex--no-grow">
                                 <div class="plugin-control-cluster">
@@ -88,17 +90,20 @@
                                     </sp-field-group>
                                 </div>
                             </div> 
-                            <small class="plugin-option-note">All unchecked = target everything</small>
+                            <small class="plugin-switch-note">All unchecked = target everything</small>
+                            -->
                         </div>
                         <div class="plugin-menu-section plugin-flex--no-grow"> 
-                            <h4 class="plugin-label">Currently Editing...</h4>    
-                            <div>
+                            <h4 class="plugin-label">Restrict Edits to:</h4>    
+                            <div class="plugin-filters">
                                 <div class="plugin-filter-cluster">
                                     <sp-field-label for="vertical">
                                         These sequences:
                                     </sp-field-label>
                                     <sp-tags id="stateFilters" class="plugin-filters plugin-state-filters">
-                                        <sp-tag class="plugin-tag plugin-tag--state">All Sequences</sp-tag>
+                                        <sp-tag class="plugin-tag plugin-tag--state" data-type="state" data-name="intro" data-active="false" data-filter="intro">Introduction</sp-tag>
+                                        <sp-tag class="plugin-tag plugin-tag--state" data-type="state" data-name="expanded" data-active="false" data-filter="expanded">Expanded</sp-tag>
+                                        <sp-tag class="plugin-tag plugin-tag--state" data-type="state" data-name="collapsed" data-active="false" data-filter="collapsed">Collapsed</sp-tag>
                                     </sp-tags>
                                 </div>
                                 <div class="plugin-filter-cluster">
@@ -106,9 +111,11 @@
                                         For these devices:
                                     </sp-field-label>
                                     <sp-tags id="deviceFilters" class="plugin-filters plugin-device-filters">
-                                        <sp-tag class="plugin-tag plugin-tag--device">All Devices</sp-tag>
+                                        <sp-tag class="plugin-tag plugin-tag--device" data-type="device" data-name="desktop" data-active="false" data-filter="dt"><sp-icon-device-desktop slot="icon" size="s"></sp-icon-device-desktop>Desktop</sp-tag>
+                                        <sp-tag class="plugin-tag plugin-tag--device" data-type="device" data-name="mobile" data-active="false" data-filter="mb"><sp-icon-device-phone slot="icon" size="s"></sp-icon-device-phone>Mobile</sp-tag>
                                     </sp-tags>
                                 </div>
+                                <small id="filterNote" class="plugin-filter-note">Edits are currently unrestricted</small>
                             </div>
                         </div>
                         <div class="plugin-menu-section">
@@ -200,9 +207,12 @@
                     </div>
                 </div>                
             </div>
-            <sp-action-bar id="action-bar" class="plugin-action-bar" emphasized>
+            <sp-action-bar id="action-bar" class="plugin-action-bar selection-same-groups">
                 <p id="feedback" class="feedback-area">Loading...</p>
-                
+                <!-- <sp-action-button slot="buttons" id="btnSelect" label="Select">
+                    <sp-icon-layers slot="icon"></sp-icon-layers>
+                    Select All Layers ${Name}
+                </sp-action-button> -->
                 <sp-action-button slot="buttons" id="btnLink" label="Link">                    
                     <sp-icon-link slot="icon"></sp-icon-link>
                     Link

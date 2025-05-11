@@ -1,4 +1,5 @@
 const { core } = require("photoshop");
+const {storage} = require('uxp');
 //////////////////////////////////////
 ////////////UTILITIES/////////////
 //////////////////////////////////////
@@ -25,6 +26,18 @@ function restoreFocus() {
     }
 }  
 
+
+async function loadManifest() {
+    const pluginFolder = await storage.localFileSystem.getPluginFolder();
+    const manifestFile = await pluginFolder.getEntry('manifest.json');
+    const text = await manifestFile.read();
+    return JSON.parse(text);
+}
+
+function parentGroupCount(layers) {
+    return new Set(layers.map(l => l.parent?.id))
+}
+
 function getEl(selector) {
     return document.querySelector(selector);
 }
@@ -46,9 +59,95 @@ function proxyArraysEqual(a, b) {
     return a.every((elementA, i) => elementA._docId === b[i]._docId && elementA._id === b[i]._id);
 }
 
+function capitalizeFirstLetter(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+
+
+/*overrides needed because sp-tag doesn't capture pointer events in the spaces between its border and its label text*/
+/*and UXP doesn't support the psuedo selectors needed to pierce the shadow DOM on SWC components.*/
+/*i hate this, but what can you do?*/
+function setTagLabelCursor(elements, newCursorValue = 'pointer') {
+    const tags = elements;
+    tags.forEach(tag => {
+        if (tag.shadowRoot) {
+        const labelSpan = tag.shadowRoot.querySelector('span.label');
+        if (labelSpan) {
+            labelSpan.style.cursor = newCursorValue;
+        } else {
+            console.warn(`Could not find 'span.label' in sp-tag's shadowRoot for tag:`, tag);
+        }
+        } else {
+        // Shadow DOM might not be ready yet, or it's not an sp-tag as expected.
+        // Consider MutationObserver if tags are added dynamically and this runs too early.
+        console.warn('sp-tag found, but shadowRoot is not available:', tag);
+        }
+    });
+}
+
+
+/**
+ * Escape any special RegExp characters in a string.
+ */
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Given your scopeFilters array, build a RegExp that enforces:
+ *  - at least one active "state" filter (if any exist)
+ *  - at least one active "device" filter (if any exist)
+ * If no active filters of a given type exist, that type is ignored.
+ * If there are zero active filters overall, returns a RegExp that matches everything.
+ *
+ * @param {Array<{type: "state"|"device", filter: string, active?: boolean|string}>} scopeFilters
+ * @returns {RegExp}
+ */
+function buildScopeRegex(scopeFilters) {
+    console.log('scopeFilters', scopeFilters);
+  // only keep filters that are truthy/active
+  const active = scopeFilters.filter(f =>
+    f.active === undefined     // no active flag means include
+    || f.active === true        // boolean true
+    || f.active === 'true'      // string "true"
+  );
+
+  const byType = {
+    state: active
+      .filter(f => f.type === 'state')
+      .map(f => escapeRegex(f.filter)),
+    device: active
+      .filter(f => f.type === 'device')
+      .map(f => escapeRegex(f.filter))
+  };
+
+  const lookaheads = [];
+  if (byType.state.length) {
+    lookaheads.push(`(?=.*(?:${byType.state.join('|')}))`);
+  }
+  if (byType.device.length) {
+    lookaheads.push(`(?=.*(?:${byType.device.join('|')}))`);
+  }
+
+  if (!lookaheads.length) {
+    // no active filters → match everything
+    return /.*/;
+  }
+
+  // ^... ensures we apply all lookaheads, and then allow any characters
+  const pattern = `^${lookaheads.join('')}.*$`;
+  return new RegExp(pattern);
+}
+
 export {
     getEl,
     getEls,
     restoreFocus,
-    proxyArraysEqual
+    proxyArraysEqual,
+    capitalizeFirstLetter,
+    parentGroupCount,
+    loadManifest,
+    setTagLabelCursor,
+    buildScopeRegex
 };

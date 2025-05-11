@@ -2,7 +2,7 @@
 const { app, core, action } = require('photoshop');
 const batchPlay = action.batchPlay;
 
-async function selectLayersByName() { 
+async function selectLayersByName(filter, options) { 
     console.log("(Action) Attempting to select layers matching current selection (using executeAsModal)...");
     try {
         // --- Get Target Names from Current Selection (Done outside modal) ---

@@ -17,6 +17,8 @@ import '@spectrum-web-components/icons-workflow/icons/sp-icon-edit.js';
 import '@spectrum-web-components/icons-workflow/icons/sp-icon-application-delivery.js';
 import '@spectrum-web-components/icons-workflow/icons/sp-icon-duplicate.js';
 import '@spectrum-web-components/icons-workflow/icons/sp-icon-education.js';
+import '@spectrum-web-components/icons-workflow/icons/sp-icon-device-phone.js';
+import '@spectrum-web-components/icons-workflow/icons/sp-icon-device-desktop.js';
 import '@spectrum-web-components/icons-ui/src/index.js';
 
 import '@swc-uxp-wrappers/button/sp-button.js';
@@ -35,28 +37,30 @@ import '@swc-uxp-wrappers/dialog/sp-dialog.js';
 import '@swc-uxp-wrappers/divider/sp-divider.js';
 import '@swc-uxp-wrappers/tags/sp-tag.js';
 
+import { diff, patch } from "@opentf/obj-diff";
+
 import Editor from './editor.js';
 import Builder from './builder.js';
 
 // Configurations and Constants
 import { creativeConfigs } from "./js/constants/creativeConfigs.js";
 import { getPSTheme } from "./js/helpers/themeSetter.js";
-import { getEl } from "./js/helpers/utils.js";
+import { getEl, loadManifest } from "./js/helpers/utils.js";
 
+const {versions, host, storage} = require('uxp');
+// const os = require('os').platform();
+// const arch = require('os').arch();
+const {arch, platform} = require('os');
 
 const Plugin = (() => {
     // UXP modules
-    console.log('loading plugin');
-    //eventually add file load detection, which checks the activeDocument for a number of indicators
+    ///Eventually i'll use this component  to open files, and send the user to the studio when finished. 
+    //Add file load detection, which checks the activeDocument for a number of indicators
     //which will tell it what type of creative we're working on. Then it will set mode and pull the correct
     //config schema from creativeConfigs
-    const mode = 'velocity';
-    const creativeState = {
-        ...creativeConfigs.find(config => config.name === mode)
-    };
-
-    const pluginState = {
+    const state = {
         currentMode: 'build',
+        mode: 'velocity',
         sections: {
             nav: {
                 element: getEl('sp-sidenav'),
@@ -67,13 +71,22 @@ const Plugin = (() => {
             }
         }
     }
+    const creativeState = {
+        ...creativeConfigs.find(config => config.name === state.mode)
+    };
 
-    const {nav} = pluginState.sections; 
+
+    const handleStateChange = (params = {panel: null, newState: null}) => {
+        if(!params.panel || !params.newState) return;
+        state.sections[params.panel] = {...params.newState};
+    }
+    const {nav} = state.sections; 
 
     function setActiveMenu(event) {
-        ///shallow change so no copy needed for now. 
-        pluginState.currentMode = event.target.value;
-        nav.targetElement.setAttribute(nav.activeAttribute, pluginState.currentMode);
+        ///note: these are shallow changes so no spread to copy needed for now. May be needed layer if currentMode becomes a bit more comples in terms of the stuff i want
+        //to store in it. 
+        state.currentMode = event.target.value;
+        nav.targetElement.setAttribute(nav.activeAttribute, state.currentMode);
     }
     
     async function applyTheme() {
@@ -81,25 +94,42 @@ const Plugin = (() => {
         document.getElementById('theme').setAttribute("color", themeValue);
     }
 
-    const handlePluginStateChange = (params = {panel: null, state: null}) => {
-        if(!params.panel || !params.state) return;
-        const currentSections = {...pluginState.sections}
-        currentSections[params.panel] = {...params.state};
-        pluginState.sections = currentSections;
-        console.log('pluginStateChange:', pluginState);
+    async function loadPluginState() {
+        const manifest = await loadManifest();
+        return manifest;
     }
 
     // --- Initialization ---
-    const initializePanel = () => {
-        Editor.initializeSection(handlePluginStateChange);
-        Builder.initializeSection(handlePluginStateChange);
+    const initializePanel = async () => {
+        const manifest = await loadPluginState();
+        console.clear();
+        console.log("----------------------------------------------------------");
+        console.log("----------------------------------------------------------");
+        console.log('\n');
+        console.log('\n');
+        console.log(`Loaded: ${manifest.id}`);
+        console.log(`Version: ${manifest.version}`);
+        console.log(`UXP Version: ${versions.uxp}`);
+        console.log('\n');
+        console.log(`Requires Min ${host.name} Version: ${manifest.host[0].minVersion}`);
+        console.log(`User Running ${host.name} Version: ${host.version}`);
+        console.log(`On Platform: ${platform() === 'win32' ? 'Windows' : 'Mac'} ${arch()}`);
+        console.log('\n');
+        console.log('\n');
+        console.log("----------------------------------------------------------");
+        console.log("----------------------------------------------------------");
+
+        //Initialize Sections
+        state.sections.editor = Editor.initializeSection(handleStateChange);
+        state.sections.builder = Builder.initializeSection(handleStateChange);
+
         //Assign Event Listeners
         nav.element.addEventListener('change', setActiveMenu);
         applyTheme();
         document.theme.onUpdated.addListener(applyTheme);  
     }
 
-    return { initializePanel, pluginState }
+    return { initializePanel, state }
 })();
 
 export default Plugin;

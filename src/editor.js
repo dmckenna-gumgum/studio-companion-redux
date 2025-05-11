@@ -1,4 +1,4 @@
-import { getEl, getEls, restoreFocus, proxyArraysEqual } from "./js/helpers/utils.js";
+import { getEl, getEls, restoreFocus, proxyArraysEqual, capitalizeFirstLetter, parentGroupCount, setTagLabelCursor, buildScopeRegex } from "./js/helpers/utils.js";
 import { selectLayersByName } from "./js/actions/selectLayersByName.js";
 import { linkLayersByName } from "./js/actions/linkLayersByName.js";
 import { unlinkLayersByName } from "./js/actions/unlinkLayersByName.js";
@@ -7,19 +7,24 @@ import { propagateLayers } from "./js/actions/propagateLayers.js";
 import { transformLayersIndividually } from "./js/actions/transformLayersIndividually.js";
 import { deleteSelectedLayers } from "./js/actions/deleteSelectedLayers.js";
 import { SelectListener } from "./js/actions/SelectListener.js";
-
+import { createLogger } from './js/helpers/logger.js';
 
 const { core, constants } = require("photoshop");
 const { LayerKind } = constants;
 let _onUpdateCallback = null;
+const logger = createLogger({ prefix: 'Editor', initialLevel: 'DEBUG' });
 
 const Editor = (() => {
 
     const stateHandler = {
         set: function(target, property, value) {
+            // logger.debug('SET: ', property, value);
             target[property] = value;
             _notifyStateChange();
             return true;
+        },
+        get: function(target, property) {
+            return target[property];
         }
     };
 
@@ -27,13 +32,17 @@ const Editor = (() => {
         if (_onUpdateCallback) {
             _onUpdateCallback({
                 panel: 'editor',
-                state: state
+                newState: state
             });
         }
     }
 
     const linkSelectedLayers = async () => {
     }
+
+    const unlinkSelectedLayers = async () => {
+    }
+
 
     const _state = {
         element: getEl('#editor-menu'),
@@ -108,6 +117,15 @@ const Editor = (() => {
                 callback: null
             },
             {
+                description: "Unlink Selected Layers",
+                name: "UnlinkSelected",
+                action: unlinkSelectedLayers,
+                buttonId: 'btnUnlink',
+                buttonElement: document.querySelector('#btnUnlink'),
+                options: [],
+                callback: null
+            },
+            {
                 description: "Transform Layers Individually",
                 name: "ScaleIndividually",
                 action: transformLayersIndividually,
@@ -141,19 +159,21 @@ const Editor = (() => {
             state: getEl('#stateFilters'),
             device: getEl('#deviceFilters')
         },
+        filterFeedbackElement: getEl('.plugin-filter-note'),
+        filterTagToggles: getEls('.plugin-filters .plugin-tag'),
         scopeFilters: [],
-        scopeMatchRule: 'all',
+        filterRegex: '',
         actionBar: {
             element: getEl('#action-bar'),
-            feedbackElement: getEl('#feedback'),
+            feedbackElement: getEl('#feedback')
         },
         currentSelection: {
             layers:[],
             viable: false,
+            sameGroup: true,
             identical: false,   
         }
     }
-
     const state = new Proxy(_state, stateHandler);
 
     const _eventListeners = [];
@@ -161,7 +181,6 @@ const Editor = (() => {
         eventConfig.eventHandler = (e) => eventConfig.handlerFunc(e, eventConfig);
         eventConfig.listener = eventConfig.element.addEventListener(eventConfig.eventType, eventConfig.eventHandler);
         _eventListeners.push(eventConfig);
-        console.log('registerEventListener', eventConfig);
     }
 
     const destroyEventListener = (eventListener) => {
@@ -171,7 +190,7 @@ const Editor = (() => {
     }
 
     const getSelectionViability = (layers) => {
-        console.log(layers);
+        logger.debug(layers);
         ///if some selected layers are groups, BUT not all of them are groups, then it's not viable - We don't want to be applying transformations
         /// to individual layers and artboards on the same action because it'll produce weird results.
         return !layers.some(item => item.kind === LayerKind.GROUP) && layers.every(item => item.kind !== LayerKind.GROUP)
@@ -184,6 +203,7 @@ const Editor = (() => {
             _sel.viable = true;
             _sel.identical = false;
             _sel.layers = [];
+            _sel.sameGroup = true;
             state.currentSelection = _sel;
             return state.currentSelection;
         }
@@ -203,6 +223,7 @@ const Editor = (() => {
         } else {
             _sel.viable = getSelectionViability(selection);
             _sel.layers = selection;
+            _sel.parentGroupCount = parentGroupCount(selection);
             state.currentSelection = _sel;
             return state.currentSelection;
         }
@@ -220,8 +241,9 @@ const Editor = (() => {
         return state.currentSelection;
     } 
     
-    function changeFilters(dataset, add) {
-        const filter = {...dataset};
+    function changeFilters(event, add) {
+        const {dataset} = event.target;
+        const filter = {...dataset, active: add};
         const newScopeFilters = [...state.scopeFilters];
         const idx = newScopeFilters.findIndex(f => f.name === filter.name);
         if (idx > -1) { // Filter with the same name found
@@ -235,21 +257,32 @@ const Editor = (() => {
                 state.scopeFilters = newScopeFilters;
             }
         }
+        state.filterRegex = buildScopeRegex(state.scopeFilters);
+        updateFilterUI(event, add);
         return state.scopeFilters;
     }
 
     function getFilters() {
-        return state.scopeFilters;
+        return state.filterRegex;
     }
     // --- Layer Selection Handlers --- 
     function handleLayerSelect(event, selection = []) {
         const newSelection = setCurrentSelection(selection);
-        console.log(newSelection)
         toggleActionBar(newSelection);
         toggleButtons(newSelection.viable);
     }
 
-    function updateFilterUI() {
+    function updateFilterUI(event, checked) {
+        event.target.setAttribute('data-active', checked);
+        event.target.classList.toggle('plugin-tag--active');
+        if(state.scopeFilters.length === 0 || state.scopeFilters.length === state.filterTagToggles.length) {
+            state.filterFeedbackElement.classList.remove('plugin-filter-note--restricted');
+            state.filterFeedbackElement.textContent = 'Edits are currently unrestricted';
+        } else {
+            state.filterFeedbackElement.classList.add('plugin-filter-note--restricted');
+            state.filterFeedbackElement.textContent = 'Edits are currently restricted to selected filters';
+        }
+        /*
         const deviceFilters = state.scopeFilters.filter(f => f.type === 'device');
         const stateFilters = state.scopeFilters.filter(f => f.type === 'state');
         const deviceFilterContainer = state.filterTagContainers.device;
@@ -274,65 +307,66 @@ const Editor = (() => {
                 stateFilterContainer.appendChild(tag);
             });
         }
+        */
     }
-    
-
 
     function createTag(type, name) {
         const tag = document.createElement('sp-tag');
         tag.classList.add('plugin-tag', `plugin-tag--${type}`);
-        tag.textContent = name;
+        tag.textContent = capitalizeFirstLetter(name);
         return tag;
     }
 
     // --- UI Feedback Handlers --- 
     function toggleButtons(enable = getCurrentSelection().viable) {
-        console.log('enable buttons?:', enable)
         const buttonState = getButtonState();
-        console.log('button state:', buttonState)
         if(enable === buttonState) return;
         const newState = setButtonState(enable);
         state.behaviors.forEach(behavior => {
             if(!newState) {
                 behavior.buttonElement.setAttribute('disabled', true);
-                behavior.buttonElement.style.color = 'rgba(255, 255, 255, 0.1)';
+                // behavior.buttonElement.style.color = 'rgba(255, 255, 255, 0.1)';
             } else {
                 behavior.buttonElement.removeAttribute('disabled');  // clears the flag
-                behavior.buttonElement.removeAttribute('style');
+                // behavior.buttonElement.removeAttribute('style');
             }
         });
     }
 
     function toggleActionBar(selection = null) {
         if(!selection || selection.layers.length === 0) return state.actionBar.element.removeAttribute('open');    
-        state.actionBar.element.setAttribute('open', true);
+        state.actionBar.element.setAttribute('open', true);       
+        selection.parentGroupCount.size === 1 ? 
+            state.actionBar.element.classList.replace('selection-many-groups', 'selection-same-groups') : 
+            state.actionBar.element.classList.replace('selection-same-groups', 'selection-many-groups');
+
         if(!selection.viable) {
-            state.actionBar.feedbackElement.textContent = `You've currently selected a mix of artboards and layers. Performing bulk actions on a mix of artboards and layers is not supported`;
-            state.actionBar.element.removeAttribute('emphasized');
-        } else {
-            state.actionBar.feedbackElement.textContent = `${selection.layers.length} layers selected`;
-            state.actionBar.element.setAttribute('emphasized', true);
+            state.actionBar.feedbackElement.textContent = `You've currently selected an artboard, or a mix of artboards and layers. Performing bulk actions on artboards is not supported`;
+            state.actionBar.element.classList.add('mixed-selection');
+        } else { 
+            state.actionBar.feedbackElement.innerHTML = `<b>${selection.layers.length} layers</b> selected ${selection.parentGroupCount.size === 1 ? '<b>in the same Artboard</b>' : `across <b>${selection.parentGroupCount.size} Artboards</b>`}`;
+            state.actionBar.element.classList.remove('mixed-selection');
         }
     }   
 
     // --- Editor Event Handlers --- 
     function handleEditorAction(event, behavior) {
-        console.log('handleEditorAction', event, behavior); 
+        logger.debug('handleEditorAction', event, behavior); 
         // console.log(`executing ${behavior.name} action...`);
         setTimeout(async () => {
             try {
-                console.log(`Starting awaited ${behavior.name} action...`);
+                logger.debug(`Starting awaited ${behavior.name} action...`);
                 const validTypes = getFilters();
-                console.log(validTypes)
+                logger.debug('validTypes', validTypes)
                 const result = await behavior.action(validTypes, ...behavior.options); 
-                console.log(`DEBUG: Result from ${behavior.name} action:`, result);
+                logger.debug(`DEBUG: Result from ${behavior.name} action:`, result);
                 restoreFocus();
                 behavior.callback?.(result.layers);
                 if (!result.success && result.message) { 
                     await core.showAlert(result.message);
                 } 
             } catch (err) {
-                console.error(`DEBUG: Error calling ${behavior.name} action:`, err);
+                logger.error(`DEBUG: Error calling ${behavior.name} action:`, err);
                 const errorMessage = err.message || err.toString() || "Unknown error.";
                 state.actionBar.feedbackElement.textContent = `Error: ${errorMessage}`;
                 await core.showAlert(`Error ${behavior.name}: ${errorMessage}`);
@@ -341,9 +375,15 @@ const Editor = (() => {
     }
 
     function handleFilterChange(event, behavior) {
-        const {dataset, checked} = event.target;
-        const newFilters = changeFilters(dataset, checked);
-        behavior.callback(newFilters);
+        const {checked} = event.target;
+        const newFilters = changeFilters(event, checked);
+        behavior.callback?.(newFilters);
+    }
+
+    function handleFilterTagClick(event, behavior) {
+        const checked = !(event.target.dataset.active === 'true' || event.target.dataset.active === true);
+        const newFilters = changeFilters(event, checked);
+        behavior.callback?.(newFilters);
     }
 
    const initializeSection = (onUpdate) => {
@@ -351,9 +391,24 @@ const Editor = (() => {
         _onUpdateCallback = onUpdate;
         
         state.behaviors.forEach(behavior => {
+            /* EXAMPLE BEHAVIOR OBJECT
+            {
+                description: "Propagate Missing Layers",
+                name: "PropagateMissing",
+                actionReturns: 'proxyArray: all matching layers including selection',
+                action: propagateLayers,
+                buttonId: 'btnMissing',
+                buttonElement: document.querySelector('#btnMissing'),
+                options: [true],
+                callback: null
+            }
+            */
             const eventObj = {
                 eventName: `${behavior.name}_Handler`,
                 eventType: 'click',
+                name: behavior.name,
+                description: behavior.description,
+                actionReturns: behavior.actionReturns,
                 element: behavior.buttonElement,
                 elementId: behavior.buttonId,
                 action: behavior.action,
@@ -377,9 +432,28 @@ const Editor = (() => {
             }
             registerEventListener(eventObj);
             // filter.addEventListener('change', handleFilterChange);
-        });
+        });    
+        try {
+            setTagLabelCursor(state.filterTagToggles);
+            state.filterTagToggles.forEach(filter => {
+                const eventObj = {
+                    eventName: `FilterTag_Handler`,
+                    eventType: 'click',
+                    element: filter,
+                    elementId: filter.id,
+                    action: null,
+                    options: [],
+                    callback: null,
+                    handlerFunc: handleFilterTagClick
+                }
+                registerEventListener(eventObj);
+            });
+        } catch (error) {
+            console.error(error);
+        }        
         ///this will be refactored eventually. At one point i was trying to do this all with classes but i've decided against that. 
         const selectListener = new SelectListener({callback: handleLayerSelect});
+        return state
     }
     return { initializeSection };
 })();

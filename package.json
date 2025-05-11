@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@opentf/obj-diff": "^0.12.0",
     "@swc-uxp-wrappers/action-bar": "^2.0.0",
     "@swc-uxp-wrappers/action-group": "^2.0.0",
     "@swc-uxp-wrappers/banner": "^2.0.0",
@@ -21,6 +22,8 @@
     "@swc-uxp-wrappers/divider": "^2.0.0",
     "@swc-uxp-wrappers/field-group": "^2.0.0",
     "@swc-uxp-wrappers/field-label": "^2.0.0",
+    "@swc-uxp-wrappers/overlay": "^2.0.0",
+    "@swc-uxp-wrappers/popover": "^2.0.0",
     "@swc-uxp-wrappers/sidenav": "^2.0.0",
     "@swc-uxp-wrappers/switch": "^2.0.0",
     "@swc-uxp-wrappers/tags": "^2.0.0",

@@ -33,19 +33,28 @@ function getLayerContainer(selection) {
  * Recursively finds all groups in the given layer set that are not the source container and whose names contain any of the given name filters.
  */
 function findValidGroups(potentialGroups, sourceContainer, nameFilters = []) {
+    ////legacy logic, updating to use regex instead
     return potentialGroups.reduce((acc, group) => {
         if (group.kind !== LayerKind.GROUP) return acc;
 
         const isNotSource = sourceContainer === null || group.id !== sourceContainer.id;
-        ////this will eventually need AND/OR logic to handle multiple filters
-        const matchesFilter = (
-            nameFilters.length === 0 ||
-            nameFilters.some((filter) => {
-                //console.log(`(findAllGroups) Comparing: ${group.name} against ${filter}`);
-                return group.name?.includes(filter) || group.name === filter;
-            })
-        );
-        //log(`(findAllGroups) Group: ${group.name}, isNotSource: ${isNotSource}, matchesFilter: ${matchesFilter}`);
+        let matchesFilter = false;
+        if(Array.isArray(nameFilters)) {
+            ////legacy search using array of strings.
+            ////this will eventually need AND/OR logic to handle multiple filters
+            matchesFilter = (
+                nameFilters.length === 0 ||
+                nameFilters.some((filter) => {
+                    //console.log(`(findAllGroups) Comparing: ${group.name} against ${filter}`);
+                    return group.name?.includes(filter) || group.name === filter;
+                })
+            );
+            //log(`(findAllGroups) Group: ${group.name}, isNotSource: ${isNotSource}, matchesFilter: ${matchesFilter}`);
+        } else {
+            ////Updated version testing a regex expression. Will eventually transition everything to this but i don't want
+            ////to break a bunch of shit in the meantime. 
+            matchesFilter = nameFilters.test(group.name);
+        }
 
         if (isNotSource && matchesFilter) {
             acc.push(group);

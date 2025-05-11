@@ -20,7 +20,7 @@ const Builder = (() => {
         if (_onUpdateCallback) {
             _onUpdateCallback({
                 panel: 'builder',
-                state: builderState
+                newState: builderState
             });
         }
     }

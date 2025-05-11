@@ -449,6 +449,18 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
+"@opentf/obj-diff@^0.12.0":
+  version "0.12.0"
+  resolved "https://registry.yarnpkg.com/@opentf/obj-diff/-/obj-diff-0.12.0.tgz#5eff78c32cb09fa405eaaee2ad14d8b1f240c93d"
+  integrity sha512-mxgT/RaarPGIcdFeQsdBxY7jFAFoH5L6P5BHOG8c+uytKAzylTchHa7tXhlXRt1bTW0gnqQ6fcTL8ex2GsXo1w==
+  dependencies:
+    "@opentf/std" "^0.12.0"
+
+"@opentf/std@^0.12.0":
+  version "0.12.0"
+  resolved "https://registry.yarnpkg.com/@opentf/std/-/std-0.12.0.tgz#f7529a262812be368f46de94ffa80ca97b15e6dd"
+  integrity sha512-UVK4sKbjtBmad8rbv3i5iIYR6xGjdBX75JN7uIKTKzZ40MObstuZkUoGfA5OpnVDCCOPLsPqioSYTBENJgcrMw==
+
 "@polka/url@^1.0.0-next.24":
   version "1.0.0-next.29"
   resolved "https://registry.yarnpkg.com/@polka/url/-/url-1.0.0-next.29.tgz#5a40109a1ab5f84d6fd8fc928b19f367cbe7e7b1"
@@ -804,6 +816,19 @@
   dependencies:
     "@spectrum-web-components/base" "^0.37.0"
 
+"@swc-uxp-internal/overlay@npm:@spectrum-web-components/overlay@0.37.0":
+  version "0.37.0"
+  resolved "https://registry.yarnpkg.com/@spectrum-web-components/overlay/-/overlay-0.37.0.tgz#6173da0c12b407c572acba15a0024d828e7dea07"
+  integrity sha512-kMEXAWdHJ/RGLbR4GHAEvgb03uaKNJSakVYgqoxQ15Z8PTq669FZQZMvYGr5VftRaXpejm5n1GK+KxuK6Cy+uw==
+  dependencies:
+    "@floating-ui/dom" "^1.5.1"
+    "@floating-ui/utils" "^0.1.1"
+    "@spectrum-web-components/action-button" "^0.37.0"
+    "@spectrum-web-components/base" "^0.37.0"
+    "@spectrum-web-components/reactive-controllers" "^0.37.0"
+    "@spectrum-web-components/shared" "^0.37.0"
+    "@spectrum-web-components/theme" "^0.37.0"
+
 "@swc-uxp-internal/popover@npm:@spectrum-web-components/popover@0.37.0":
   version "0.37.0"
   resolved "https://registry.yarnpkg.com/@spectrum-web-components/popover/-/popover-0.37.0.tgz#0a37d0886994f9b24e70a6d6ff6da543a775a324"
@@ -974,7 +999,15 @@
   dependencies:
     "@swc-uxp-internal/help-text" "npm:@spectrum-web-components/help-text@0.37.0"
 
-"@swc-uxp-wrappers/popover@2.0.0":
+"@swc-uxp-wrappers/overlay@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@swc-uxp-wrappers/overlay/-/overlay-2.0.0.tgz#9ecb0f47832a1f2f612c7f18c3e7f275982dd86a"
+  integrity sha512-z62AFiL9thiwN1lM1Zwal9YXY4b30tLoaPGg2sGPRCZL7lrRTEDdQzMRC2J7dudqP/BzirDSlzBtqEns9sw60Q==
+  dependencies:
+    "@swc-uxp-internal/overlay" "npm:@spectrum-web-components/overlay@0.37.0"
+    "@swc-uxp-wrappers/action-button" "2.0.0"
+
+"@swc-uxp-wrappers/popover@2.0.0", "@swc-uxp-wrappers/popover@^2.0.0":
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/@swc-uxp-wrappers/popover/-/popover-2.0.0.tgz#1397d6dccb6deb939f68170258ec59d03c586a83"
   integrity sha512-KZCVCo9qs3IH582ou28t/8GROYxBYl+og0OOC5nCFIBcL9DakkQHZBLviU68R29+1PzcS1EnZ6ZMAU2UrOiixw==

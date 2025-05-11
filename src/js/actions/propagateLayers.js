@@ -2,18 +2,18 @@ const { app, core, constants } = require("photoshop");
 const { LayerKind, ElementPlacement } = constants;
 import {getLayerContainer, findValidGroups, toggleHistory, checkForExistingLayers, getLayerIndex, duplicateAndMoveToBottom, placeAtCorrectDepth } from '../helpers/helpers.js';
 
-const actionName = 'Propagate Missing Layers';
+const actionName = 'Propagate Layer';
 
 
 // =============================================================================
-//  PROPAGATE MISSING LAYERS ACTION
+//  PROPAGATE LAYERS ACTION
 // =============================================================================
 // Similar to propagateLayersAction, but only propagates selected layer(s)
 // to targets where no layer with a matching name already exists.
 // =============================================================================
 
 
-async function propagateLayers(validTypes, missingOnly) {
+async function propagateLayers(filter, missingOnly = false) {
     console.log("(Action Script) propagateLayers started.");
     let executionResult = { success: false, message: "", count: 0 }; // count = number of layers duplicated * number of targets
     let skippedTargets = 0;
@@ -50,8 +50,8 @@ async function propagateLayers(validTypes, missingOnly) {
                 return { success: false, message: "Selected layers are not in a valid container (Artboard/Group).", count: 0 };
             }
           
-            console.log(`(Modal Action) Valid types: [${validTypes.join(', ')}]`);
-            const targetContainers = findValidGroups(activeDoc.layers, sourceContainer, validTypes);
+            console.log(`(Modal Action) Matching Boards Using: [${filter.toString()}]`);
+            const targetContainers = findValidGroups(activeDoc.layers, sourceContainer, filter);
             console.log(`(Modal Action) Found ${targetContainers.length} target Group(s).`);
 
             if (targetContainers.length === 0) {

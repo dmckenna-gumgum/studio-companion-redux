@@ -88,7 +88,44 @@ sp-button-group {
   left: 0;
   width: 100%;
   padding: 0;
+
 }
+
+.sp-action-bar {  
+  --spectrum-actionbar-shadow-horizontal: var(--spectrum-drop-shadow-x);
+  --spectrum-actionbar-shadow-vertical: var(--spectrum-drop-shadow-y);
+  --spectrum-actionbar-shadow-blur: var(--spectrum-drop-shadow-blur);
+  --spectrum-actionbar-shadow-color: var(--spectrum-drop-shadow-color);
+}
+
+sp-action-bar.selection-many-groups {
+  --spectrum-actionbar-popover-background-color: var(--spectrum-accent-color-500);
+  --spectrum-actionbar-popover-border-color: var(--spectrum-informative-background-color-default);
+}
+
+sp-action-bar.selection-same-groups {
+  --spectrum-actionbar-popover-background-color: var(--spectrum-celery-500);
+  --spectrum-actionbar-popover-border-color: var(--spectrum-celery-background-color-default);
+}
+
+sp-action-bar.mixed-selection {
+  --spectrum-actionbar-popover-background-color: var(--spectrum-red-background-color-default);
+  --spectrum-actionbar-popover-border-color: var(--spectrum-red-background-color-default);
+}
+
+sp-action-bar.mixed-selection sp-action-button[disabled] {
+  color: rgba(255,255,255,0.5);
+}
+
+sp-action-bar.selection-many-groups sp-action-button {
+  --spectrum-actionbutton-background-color-hover: var(--spectrum-accent-color-700);
+  --spectrum-actionbutton-background-color-down: var(--spectrum-accent-color-400);
+}
+sp-action-bar.selection-same-groups sp-action-button {
+  --spectrum-actionbutton-background-color-hover: var(--spectrum-celery-700);
+  --spectrum-actionbutton-background-color-down: var(--spectrum-celery-400);
+}
+
 
 .plugin-header {
     display: flex;
@@ -182,30 +219,74 @@ sp-button-group {
 
 .plugin-tag {
   margin: 0.125rem;
+  cursor: pointer;
 }
 
-.plugin-tag--device {
-  --spectrum-tag-border-color: var(--spectrum-blue-background-color-default);
+.plugin-tag {
+  --spectrum-tag-background-color: var(--uxp-host-background-color);
+  --spectrum-tag-background-color-hover: var(--uxp-host-border-color);
+
+  --spectrum-tag-border-color: var(--uxp-host-border-color);
+  
   --spectrum-tag-content-color: var(--uxp-host-text-color);
-  --spectrum-tag-background-color: var(--spectrum-blue-background-color-default);
-  --spectrum-tag-border-color-hover: var(--spectrum-blue-background-color-default);
-  --spectrum-tag-background-color-hover: var( --spectrum-blue-background-color-default );
-  --spectrum-tag-content-color-hover: var( --uxp-host-text-color );
-  --spectrum-tag-border-color-active: var(--spectrum-blue-background-color-default);
-  --spectrum-tag-background-color-active: var( --spectrum-blue-background-color-default );
-  --spectrum-tag-content-color-active: var( --uxp-host-text-color );
+
+}
+
+.plugin-tag--device {  
+  --spectrum-tag-background-color-active: var(--spectrum-magenta-300);
+
+  --spectrum-tag-border-color-hover: var(--spectrum-global-color-magenta-300);
+  --spectrum-tag-border-color-active: var(--spectrum-global-color-magenta-700);
+
+  --spectrum-tag-content-color-hover: var(--spectrum-global-color-magenta-300);
+  --spectrum-tag-content-color-active: var(--uxp-host-text-color);
+}
+
+.plugin-tag--active.plugin-tag--device {
+  --spectrum-tag-border-color: var(--spectrum-magenta-700);
+  --spectrum-tag-background-color-active: var(--spectrum-magenta-700);
+
+  --spectrum-tag-background-color: var(--spectrum-magenta-500);
+  --spectrum-tag-background-color-hover: var(--spectrum-magenta-300);
+  --spectrum-tag-background-color-active: var(--spectrum-magenta-700);
+
+  --spectrum-tag-content-color: var(--uxp-host-text-color);
+  --spectrum-tag-content-color-hover: var(--uxp-host-text-color);
+  --spectrum-tag-content-color-active: var(--uxp-host-text-color);
 }
 
 .plugin-tag--state {
-  --spectrum-tag-border-color: var(--spectrum-celery-background-color-default);
+  --spectrum-tag-background-color-active: var(--uxp-host-background-color);
+  
+  --spectrum-tag-border-color-hover: var(--spectrum-global-color-fuchsia-300);
+  --spectrum-tag-border-color-active: var(--spectrum-global-color-fuchsia-700);
+
+  --spectrum-tag-content-color-hover: var(--spectrum-global-color-fuchsia-300);
+  --spectrum-tag-content-color-active: var(--spectrum-global-color-fuchsia-700 );
+}
+
+.plugin-tag--active.plugin-tag--state {
+  --spectrum-tag-border-color: var(--spectrum-fuchsia-700);
+  --spectrum-tag-background-color-active: var(--spectrum-fuchsia-300);
+
+  --spectrum-tag-background-color: var(--spectrum-fuchsia-500);
+  --spectrum-tag-background-color-hover: var(--spectrum-fuchsia-300);
+  --spectrum-tag-background-color-active: var(--spectrum-fuchsia-700);
+
   --spectrum-tag-content-color: var(--uxp-host-text-color);
-  --spectrum-tag-background-color: var(--spectrum-celery-background-color-default);
-  --spectrum-tag-border-color-hover: var(--spectrum-celery-background-color-default);
-  --spectrum-tag-background-color-hover: var( --spectrum-celery-background-color-default );
-  --spectrum-tag-content-color-hover: var( --uxp-host-text-color );
-  --spectrum-tag-border-color-active: var(--spectrum-celery-background-color-default);
-  --spectrum-tag-background-color-active: var( --spectrum-celery-background-color-default );
-  --spectrum-tag-content-color-active: var( --uxp-host-text-color );
+  --spectrum-tag-content-color-hover: var(--uxp-host-text-color);
+  --spectrum-tag-content-color-active: var(--uxp-host-text-color);
+}
+
+.plugin-filter-note {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: var(--uxp-host-font-size-smaller);
+  color: var(--spectrum-celery-600);
+}
+
+.plugin-filter-note--restricted {
+  color: var(--spectrum-red-600);
 }
 
 .plugin-option-note{
