@@ -26,6 +26,9 @@ function restoreFocus() {
     }
 }  
 
+function replaceStep(pattern, step) {
+    return pattern.replace(/\$\{step\}/g, step);
+}
 
 async function loadManifest() {
     const pluginFolder = await storage.localFileSystem.getPluginFolder();
@@ -140,6 +143,141 @@ function buildScopeRegex(scopeFilters) {
   return new RegExp(pattern);
 }
 
+/**
+ * Builds a regex pattern that matches any of the provided artboard name patterns
+ * @param {string|string[]} artboardNamePatterns - Single pattern string or array of pattern strings
+ * @returns {RegExp} - Regex that will match if any of the patterns matches a string
+ */
+function buildArtBoardSearchRegex(strings) {
+    // Handle both single string and array of strings
+    if (!Array.isArray(strings)) {
+        strings = [strings];
+    }
+    
+    // Create a pattern that matches if any of the strings match
+    // Each string is anchored with ^ and $ to ensure exact matches
+    const pattern = strings
+        .map(name => `^${name}$`)
+        .join('|');
+    
+    return new RegExp(pattern);
+}
+
+function mergeArraysByKey(sourceArray, payloadArray, key) {
+    if (!Array.isArray(sourceArray) || !Array.isArray(payloadArray)) {
+        return sourceArray || payloadArray || [];
+    }
+    
+    // Create a merged map where payload items override existing items
+    const updatedItemsMap = new Map(
+        // Start with the source array items
+        [...sourceArray.filter(item => item[key]).map(item => [item[key], item])]
+        // Merge with payload items, with payload taking precedence
+        .concat(
+            payloadArray
+                .filter(item => item[key])
+                .map(item => [item[key], item])
+        )
+    );
+    
+    // Convert map back to array
+    return [...updatedItemsMap.values()];
+}
+
+function logInitData(manifest, versions, host, document, arch, platform, theme) {
+    try {
+        // console.clear();
+        console.info("----------------------------------------------------------");
+        console.log("----------------------------------------------------------");
+        console.log('\n');
+        console.log(`%cPLUGIN INFO`, 'font-weight: bolder; font-size: 16px;');
+        console.log(`Loaded: ${manifest.id}`);
+        console.log(`Version: ${manifest.version}`);
+        console.log(`UXP Version: ${versions.uxp}`);
+        console.log('\n');
+        console.log(`%cAPPLICATION INFO`, 'font-weight: bolder; font-size: 16px;');
+        console.log(`Requires Min ${host.name} Version: ${manifest.host[0].minVersion}`);
+        console.log(`User Running ${host.name} Version: ${host.version}`);
+        console.log(`Current Theme: ${capitalizeFirstLetter(theme)}`);
+        console.log(`On Platform: ${platform === 'win32' ? 'Windows' : 'Mac'} ${arch}`);
+        console.log('\n');
+        console.log(`%cDOCUMENT INFO`, 'font-weight: bolder; font-size: 16px;');
+        console.log(`Active Document: ${document.name}`);
+        console.log(`Active Document Path: ${document.path}`);
+        console.log('\n');
+        console.log("----------------------------------------------------------");
+        console.log("----------------------------------------------------------");
+    } catch (error) {
+        console.error('Error logging initialization data', error);
+    }
+}
+
+function findInArray(sourceArray, criteria) {
+    // Handle non-array inputs gracefully
+    if (!Array.isArray(sourceArray)) {
+        // If it's an object, try to find a property matching the first key in criteria
+        if (sourceArray && typeof sourceArray === 'object') {
+            const firstKey = Object.keys(criteria)[0];
+            if (firstKey && sourceArray[firstKey] !== undefined) {
+                // If it's a direct property match, return it wrapped in an array
+                if (sourceArray[firstKey] === criteria[firstKey]) {
+                    return [sourceArray];
+                }
+                // If it's a property pointing to an array, recursively search in it
+                if (Array.isArray(sourceArray[firstKey])) {
+                    // Remove the matched key from criteria for the next search
+                    const { [firstKey]: _, ...remainingCriteria } = criteria;
+                    return Object.keys(remainingCriteria).length > 0 
+                        ? findInArray(sourceArray[firstKey], remainingCriteria)
+                        : sourceArray[firstKey];
+                }
+            }
+        }
+        return [];
+    }
+
+    // Filter the array by matching ALL criteria
+    return sourceArray.filter(item => {
+        if (!item || typeof item !== 'object') return false;
+        
+        return Object.entries(criteria).every(([key, value]) => {
+            // Handle arrays for both the item's property and the criteria value
+            if (Array.isArray(item[key]) && Array.isArray(value)) {
+                // Check if at least one value in the array matches
+                return value.some(v => item[key].includes(v));
+            }
+            // Handle array for just the criteria value (checking if item's property is in the criteria array)
+            if (Array.isArray(value)) {
+                return value.includes(item[key]);
+            }
+            // Handle array for just the item's property (checking if criteria value is in the item's array)
+            if (Array.isArray(item[key])) {
+                return item[key].includes(value);
+            }
+            // Simple equality check for primitives and other values
+            return item[key] === value;
+        });
+    });
+}
+
+function pickProps(obj, keysToKeep, defaultSchema = {}) {
+    // helper to get a fresh clone of the schema:
+    const makeClone = () =>
+      // you can swap this for structuredClone(defaultSchema)
+      // or _.cloneDeep(defaultSchema) if you need deep cloning
+      { return { ...defaultSchema }; };
+  
+    const result = {};
+    for (const key of keysToKeep) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        result[key] = obj[key];
+      } else {
+        result[key] = makeClone();
+      }
+    }
+    return result;
+  }
+
 export {
     getEl,
     getEls,
@@ -149,5 +287,11 @@ export {
     parentGroupCount,
     loadManifest,
     setTagLabelCursor,
-    buildScopeRegex
+    buildScopeRegex,
+    buildArtBoardSearchRegex,
+    logInitData,
+    replaceStep,
+    mergeArraysByKey,
+    findInArray,
+    pickProps
 };

@@ -3,105 +3,38 @@ const { app, core, action, constants } = require('photoshop');
 const { batchPlay } = action;
 const { ElementPlacement } = constants;
 
-import {findValidGroups, toggleHistory, log, rasterizeLayer, convertToSmartObject, duplicateBoardToBoard, convertAllLayersToSmartObjects } from '../helpers/helpers.js';
+import {findValidGroups, toggleHistory } from '../helpers/helpers.js';
+import { buildArtBoardSearchRegex, pickProps, replaceStep } from '../helpers/utils.js';
+import { createLogger } from '../helpers/logger.js';
 
-const debug = true;
-const rasterizeText = false;    
-const rasterizeLayerStyles = false;
-
-async function cloneArtboard(board, name, x, y) {
-    ///ALTERNATE WAY TO CLONE ARTBOARDS VIA BATCHPLAY. CURRENTLY USING NATIVE API COMMANDS SINCE THEY SEEM FASTER
-    console.log("(Modal Action) Translate To: ", x, y);
-
-    try {
-        let commands = [
-            {
-                "_obj": "select",
-                "_target": [
-                    {
-                        "_name": board.name,
-                        "_ref": "layer"
-                    }
-                ],
-                "layerID": [
-                    board.id
-                ],
-                "makeVisible": false
-            },
-            {
-                "ID": [
-                    15029,
-                    15030,
-                    15031
-                ],
-                "_obj": "duplicate",
-                "_target": [
-                    {
-                        "_enum": "ordinal",
-                        "_ref": "layer",
-                        "_value": "targetEnum"
-                    }
-                ],
-                "version": 5
-            },
-            {
-                "_obj": "move",
-                "_target": [
-                    {
-                        "_enum": "ordinal",
-                        "_ref": "layer",
-                        "_value": "targetEnum"
-                    }
-                ],
-                "to": {
-                    "_obj": "offset",
-                    "horizontal": {
-                        "_unit": x._unit,
-                        "_value": x._value
-                    },
-                    "vertical": {
-                        "_unit": y._unit,
-                        "_value": y._value
-                    }
-                }
-            },
-           
-        ];
-        const result = await batchPlay(commands, {});
-        
-        const newBoard = findValidGroups(app.activeDocument.layers, null, [name])[0];
-        return newBoard;
-    } catch (error) {
-        console.error("(Modal Action) Error cloning artboard:", error);
-    }
-}
+const logger = createLogger({ prefix: 'propagateToIntro', initialLevel: 'DEBUG' });
 
 async function centerInViewport(layers) {
     const layerIds = layers.map(layer => layer.id);
     console.log("(Modal Action) Centering in viewport:", layerIds);
     const commands = [
         {
-            "_obj": "select",
-            "_target": [
+            _obj: "select",
+            _target: [
                 {
-                    "_name": layers[0].name,
-                    "_ref": "layer"
+                    _name: layers[0].name,
+                    _ref: "layer"
                 }
             ],
-            "layerID": [...layerIds],
-            "makeVisible": false,
-            "selectionModifier": {
-                "_enum": "selectionModifierType",
-                "_value": "addToSelectionContinuous"
+            layerID: [...layerIds],
+            makeVisible: false,
+            selectionModifier: {
+                _enum: "selectionModifierType",
+                _value: "addToSelectionContinuous"
             }
         },
         {
-            "_obj": "select",
-            "_target": [
+            _obj: "select",
+            _target: [
                 {
-                    "_ref": '$Mn ',
-                    "_enum": '$FtOn',
-                    "_value": 'fitLayersOnScreen',
+                    _ref: '$Mn ',
+                    _enum: '$FtOn',
+                    _value: 'fitLayersOnScreen',
                 },
             ]
         },
@@ -139,130 +72,141 @@ async function centerInViewport(layers) {
     await batchPlay(commands, {});
 }
 
-
 async function cloneAndPositionArtboard(route) {
-    log("(Modal Action) Cloning and positioning artboard:", route.sourceBoard.name, route.sourceBoard.id);
     try {
-        //if step 0, use the destination name, otherwise we're going to use
+        const clonedBoards = [];   
+        route.sequenceState.artboards = route.sequenceState.artboards.length > 0 ? await renamePreviousBoards(route) : route.sequenceState.artboards;
+        ///NEW CLONE WILL ALWAYS BE STEP 1 IN THE SEQUENCE;
         const clonedBoardName = route.destinationName;
-        log("(Modal Action) Cloned Board Name:", clonedBoardName);
-        //if step > 0, rename the source board to the destination name
-        const existingBoards = [];
-        existingBoards.push(...await renamePreviousBoards(route));
-        log("(Modal Action) Source Board Name:", route.sourceBoard.name);
-
-        try { 
-            ///via batchplay
-            // let xOffsetPct = {_unit: "pixelsUnit", _value: route.step > 0 ? route.device === 'desktop' ? -2020 : -860 : route.device === 'desktop' ? -5200 : -10 };
-            // let yOffsetPct = {_unit: "pixelsUnit", _value: route.step === 0 ? 817 : -817};
-            // const newBoard = await cloneArtboard(route.sourceBoard, clonedBoardName, xOffsetPct, yOffsetPct);
-           
-            //via duplicate
-            let xOffsetPct = {_unit: "pixelsUnit", _value: route.step > 0 ? route.device === 'desktop' ? -2020 : -960 : route.device === 'desktop' ? -5200 : -2112 };
-            let yOffsetPct = {_unit: "pixelsUnit", _value: route.step === 0 ? route.device === 'desktop' ? 817 : 617 : route.device === 'desktop' ? -817 : -617};
-            console.log("(Modal Action) Translate To: ", xOffsetPct, yOffsetPct);
-            const newBoard = await route.sourceBoard.duplicate(route.sourceBoard, ElementPlacement.PLACEBEFORE, clonedBoardName);
-            newBoard.translate(xOffsetPct, yOffsetPct); 
-            existingBoards.push(newBoard);
-            // await centerInViewport(newBoard);
-            console.log("(Modal Action) All Boards Now:", existingBoards);
-            // log("(Modal Action) New Board Move Result:", newBoard);
-            await centerInViewport(existingBoards);
-            return newBoard;
+        const newBoard = await route.sourceBoard.duplicate(route.sourceBoard, ElementPlacement.PLACEBEFORE, clonedBoardName);
+        // console.log("(Modal Action) New Board Name:", newBoard.name);
+        let xOffsetPct = {_unit: "pixelsUnit", _value: route.step > 0 ? route.device === 'desktop' ? -2020 : -960 : route.device === 'desktop' ? -4200 : -2060 };
+        let yOffsetPct = {_unit: "pixelsUnit", _value: route.step === 0 ? route.device === 'desktop' ? 817 : 617 : route.device === 'desktop' ? -817 : -617};
+        logger.debug(`(Modal Action) Translating ${route.device} board on ${route.step} To: ${xOffsetPct._value} ${yOffsetPct._value}`);
+        newBoard.translate(xOffsetPct, yOffsetPct); 
+        clonedBoards.push(newBoard);
+        route.sequenceState.artboards.push({
+            name: clonedBoardName,
+            id: newBoard.id,
+            step: 0,
+            board: newBoard
+        });
+        try {
+            await centerInViewport(clonedBoards);
         } catch (error) {
-            console.error("(Modal Action) Error moving new board:", error);
+            console.error("(Modal Action) Error centering new board:", error);
         }
+        return {boards: clonedBoards, state: route.sequenceState};    
     } catch (error) {
         console.error("(Modal Action) Error cloning and positioning artboard:", error); 
+        return [];
     }
 }
  
+
 async function renamePreviousBoards(route) {
     const boards = [];
-    for (let i = route.step; i > 0; i--) {
-        const existingName = `intro-${i}-panel:${route.abbr}`;
-        const newName = `intro-${i+1}-panel:${route.abbr}`;
-        console.log("(Modal Action) Renaming board:", existingName, "to", newName);
-        try {
-            const prevBoard = findValidGroups(app.activeDocument.layers, null, [existingName]);
-            prevBoard[0].name = newName;
-            boards.push(...prevBoard);
-        } catch (error) {
-            console.error("(Modal Action) Error renaming board:", error)
-        }
+    for(let i = 0; i<route.sequenceState.artboards.length; i++) {
+        const artboard = route.sequenceState.artboards[i];
+        const newStep = i+2;
+        const newName = `intro-${newStep}-panel:${route.sequenceState.abbreviation}`;
+        logger.debug(`Renaming board: ${artboard.name} to ${newName}`);
+        artboard.board.name = artboard.name = newName;
+        artboard.step = artboard.step + 1;
+        boards.push(artboard);
     }
     return boards;
 }
 
-async function propagateToIntro(action) { 
-    const actionName = `Create and Propagate To ${action.device} Intro Board Step ${action.step}`;
-    const dAb = action.device === 'desktop' ? 'dt' : 'mb';
-    const sourceBoardName = action.step === 0 ? `morph-2-expanded-panel:${dAb}` : `intro-1-panel:${dAb}`;
-    const actionRoutes = [    
-        {
-            ...action,
-            sourceBoardName: sourceBoardName,
-            sourceBoard: null,
-            destinationName: `intro-1-panel:${dAb}`,    
-            destinationBoards: null,
-            abbr: dAb,
-        }
-    ];
-    console.log('(Action Script) propagateToIntro Action:', actionName);
-    // let executionResult = { success: false, message: "", count: 0 };  
+async function propagateToIntro(action, creativeState) { 
     try {      
-        // --- Execute Selection Logic within Modal Context --- 
         const result = await core.executeAsModal(async (executionContext) => {
-            console.log("(Modal Action) Starting to convert layers to smart objects...");
             const hostControl = executionContext.hostControl;
             const activeDoc = app.activeDocument;   
-            let successfulPropagations = 0;
-            console.log("(Modal Action) Action Route:", actionRoutes);
-            await toggleHistory(hostControl, "suspend", activeDoc.id, actionName);
+            // logger.debug("Creating Intro Board:");   
+            // logger.debug("State:", creativeState);
+            // logger.debug("Action:", action);
+            const newState = {...creativeState}            
+            const deviceTypes = Object.values(newState);
+            // logger.debug("Device Types:", deviceTypes);
+            // logger.debug("Action Sequences:", action.sequences);
+            const sequencesToEdit = deviceTypes.map((device) => device.sequences).map(seq => pickProps(seq, action.sequences));            
+            logger.debug("Sequences to Edit:", sequencesToEdit);
+            
+            const actionRoutes = [];
+
+            ////i'm building these actionRoutes to nomalize the data structure when sending commands to photoshop action functions            
+            sequencesToEdit.forEach((sequenceTypes) => {
+                for (const sequenceType in sequenceTypes) {
+                    
+                    const sequence = sequenceTypes[sequenceType];   
+                    ///the source will either be morph-2 for the first intro board, or intro-1 for any other situation;
+                    const sourceName = sequence.artboards.length === 0 ? `morph-2-expanded-panel:${sequence.abbreviation}` : replaceStep(sequence.artboardNamePattern, 1);
+                    ////complex lookup not needed if it's pulling from the previous intro board
+                    const sourceBoard = sequence.artboards.length === 0 ? findValidGroups(activeDoc.layers, null, buildArtBoardSearchRegex([sourceName]))[0] : sequence.artboards.find((artboard) => artboard.board.name === sourceName).board;
+                    const actualStep = sequence.artboards.length;
+                    const visualStep = actualStep + 1;
+                    const destinationBoardName = replaceStep(sequence.artboardNamePattern, 1);///clunky and does not allow for more boards yet. should revisit if that changes on the studio side.                      
+                    logger.debug("Source Name:", sourceName, "Source Board:", sourceBoard, "Destination Name:", destinationBoardName);
+                    actionRoutes.push({
+                        name: sequence.name,
+                        device: sequence.device,
+                        sourceName: sourceName,
+                        sourceBoard: sourceBoard,
+                        destinationName: destinationBoardName,
+                        destinationBoards: [],
+                        step: actualStep,
+                        visualStep: visualStep,
+                        sequenceState: sequence
+                    });
+                }
+            });         
+
             if(actionRoutes.length === 0) {
                 await core.showAlert("No valid boards found.");
                 return { success: false, message: "No valid boards found.", count: 0 };
             } else {
                 try {
-                    for (let i = 0; i < actionRoutes.length; i++) {
-                        const actionRoute = actionRoutes[i];       
-                        console.log(`(Modal Action) Finding Source Board Named: ${actionRoute.sourceBoardName}`)                 
-                        const sourceBoard = actionRoute.sourceBoard = findValidGroups(activeDoc.layers, null, [actionRoute.sourceBoardName])[0];
-                        
-                        ///make new artboards
-                        console.log(`(Modal Action) Creating a New Target Board: ${actionRoute.destinationName}`); 
-                        const targetBoard = await cloneAndPositionArtboard(actionRoute);
-                        console.log(`(Modal Action) Completed duplication of ${sourceBoard.name} to ${targetBoard.name}.`);
-                    } 
-                    let message = `Propagated layers to intro boards. Instances created: ${successfulPropagations}.`;
+                    await toggleHistory(hostControl, "suspend", activeDoc.id, action.name);
+                    let successfulPropagations = 0;
+                    for(const route of actionRoutes) {
+                        try {   
+                            // console.log(`(Modal Action) Creating a New Target Board: ${actionRoute.destinationName}`); 1
+                            const {state, boards} = await cloneAndPositionArtboard(route);
+                            state.artboards = state.artboards.sort((a, b) => a.step - b.step);
+                            logger.debug("Boards:", state.artboards);
+                            creativeState[state.device].sequences[state.name] = state;
+                            successfulPropagations += boards.length;                                
+                            // console.log(`(Modal Action) Completed duplication of ${sourceBoard.name} to ${targetBoard.name}.`);
+                        } catch (error) {
+                            console.error(`Error converting or duplicating layers on ${sourceBoard.name}: ${error.message}`);
+                            // Potentially non-critical, continue loop
+                        }
+                    }                          
+                    logger.debug("Return State:", creativeState);
                     await toggleHistory(hostControl, "resume", activeDoc.id);
-                    console.log("(Modal Action) propagateToIntro finished successfully.");
-                    return { success: true, message: message, count: successfulPropagations, payload: actionRoutes };
+                    let message = `Created ${successfulPropagations} New Intro Boards.`;
+                    return { success: true, message: message, payload: creativeState, count: successfulPropagations };   
+
                 } catch (error) {
-                    console.error("(Modal Action) Error in propagateToIntro:", error);
+                    console.error("(Modal Action) Error in normalizeAndPropagateRestStates:", error);
                     await toggleHistory(hostControl, "resume", activeDoc.id);
                     return { success: false, message: `Error: ${error.message || error}`, count: 0 };
-                }
+                }             
             }
-
-        }, { "commandName": actionName });
-
-
+        }, { "commandName": action.name });
         // --- Process Result from Modal --- 
         if (result.success) {
-            const message = `Propagated ${result.count} layers to intro board`;
-            log(`(Action) ${message}`);
+            logger.debug(result);
             return result;
         } else {
             // Use the message from the modal if available, otherwise default
             const message = result.message || "An unexpected issue occurred during selection."; 
-            log(`(Action) ${message}`);
             await core.showAlert(message); 
             return result;
         }
-
     } catch (error) {
-        console.error("(Action Script) Error in propagateToIntro:", error);
+        console.error("(Action Script) Error in normalizeAndPropagateRestStates:", error);
         await core.showAlert("An unexpected error occurred during normalizing and propagating rest states to velocity state boards. Check the console for details.");
         return { success: false, message: `Error: ${error.message || error}`, count: 0 };
     }

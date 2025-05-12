@@ -1,4 +1,6 @@
 const { app, action } = require("photoshop");
+import { createLogger } from '../helpers/logger.js';
+const logger = createLogger({ prefix: 'SelectListener', initialLevel: 'DEBUG' });
 
 class SelectListener {
     constructor(options = {}) {
@@ -9,7 +11,7 @@ class SelectListener {
     }
     startSelectionPoll() {
         if(!this.selectionPoll) {
-            this.selectionPoll = setInterval(this.selectHandler, 200);
+            this.selectionPoll = setInterval( () => { this.selectHandler('select') }, 200);
         }
     }      
     stopSelectionPoll() {

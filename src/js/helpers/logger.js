@@ -87,7 +87,6 @@ export function setGlobalLogLevel(levelName) {
 export function createLogger(config = {}) {
   const { prefix = '', initialLevel = 'DEBUG' } = config;
   let _loggerLevel = LOG_LEVELS[String(initialLevel).toUpperCase()] || globalLogLevel;
-
   const formatArgs = (originalArgs) => {
     return Array.from(originalArgs).map(arg =>
       typeof arg === 'object' && arg !== null ? getPlainObjectSnapshot(arg) : arg
@@ -111,6 +110,7 @@ export function createLogger(config = {}) {
       const level = LOG_LEVELS[String(levelName).toUpperCase()];
       if (level) {
        _loggerLevel = level;
+       console.log(`[Logger][${prefix}] Log level set to: ${levelName}`);
       } else {
         const currentLevelName = Object.keys(LOG_LEVELS).find(key => LOG_LEVELS[key] ===_loggerLevel);
         console.warn(`[Logger][${prefix}] Unknown log level: ${levelName}. Logger level remains: ${currentLevelName}`);

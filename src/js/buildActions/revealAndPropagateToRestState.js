@@ -2,7 +2,7 @@
 const { app, core, constants, action } = require('photoshop');
 const { batchPlay } = action;
 const { ElementPlacement } = constants;
-
+import { buildArtBoardSearchRegex } from '../helpers/utils.js';
 import {findValidGroups, toggleHistory, duplicateAndMoveToBottom, convertAllLayersToSmartObjects, log } from '../helpers/helpers.js';
 const actionName = 'Propagate Rest States to Velocity State Boards';
 
@@ -91,8 +91,8 @@ async function revealAndPropagateToRestState(action) {
             const activeDoc = app.activeDocument;   
             const deviceBoardSubset = action.device === 'both' ? actionRoutes : actionRoutes.filter(route => route.device === action.device);
             for (const actionRoute of deviceBoardSubset) {
-                actionRoute.sourceBoard = findValidGroups(activeDoc.layers, null, [actionRoute.sourceName])[0];
-                actionRoute.destinationBoards = findValidGroups(activeDoc.layers, null, actionRoute.destinationNames);
+                actionRoute.sourceBoard = findValidGroups(activeDoc.layers, null, buildArtBoardSearchRegex([actionRoute.sourceName]))[0];
+                actionRoute.destinationBoards = findValidGroups(activeDoc.layers, null, buildArtBoardSearchRegex([actionRoute.destinationNames]));
             }
             console.log("(Modal Action) Device Board Subset:", deviceBoardSubset);
 

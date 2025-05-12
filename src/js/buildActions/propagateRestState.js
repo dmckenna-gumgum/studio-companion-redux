@@ -3,47 +3,15 @@ const { app, core, constants, action } = require('photoshop');
 const { batchPlay } = action;
 const { ElementPlacement } = constants;
 
-import {findValidGroups, toggleHistory, duplicateBoardToBoard, convertAllLayersToSmartObjects, log } from '../helpers/helpers.js';
+import {replaceStep, buildArtBoardSearchRegex, findInArray, pickProps} from '../helpers/utils.js';
+import {findValidGroups, toggleHistory, duplicateBoardToBoard, convertAllLayersToSmartObjects } from '../helpers/helpers.js';
+import { createLogger } from '../helpers/logger.js';
+
+const logger = createLogger({ prefix: 'normalizeAndPropagateRestStates', initialLevel: 'DEBUG' });
 const actionName = 'Propagate Rest States to Velocity State Boards';
 
 const rasterizeText = true;
 const rasterizeLayerStyles = false;
-            
-const actionRoutes = [    
-    {
-        name: 'Mobile Expanded',
-        device: 'mobile',
-        sourceName: 'morph-2-expanded-panel:mb',
-        sourceBoard: null,
-        destinationNames: ['morph-1-expanded-panel:mb', 'morph-3-expanded-panel:mb'],
-        destinationBoards: null,
-    },
-    {
-        name: 'Mobile Collapsed',
-        device: 'mobile',
-        sourceName: 'morph-2-collapsed-panel:mb',
-        sourceBoard: null,
-        destinationNames: ['morph-1-collapsed-panel:mb', 'morph-3-collapsed-panel:mb'],
-        destinationBoards: null
-    },
-    
-    {
-        name: 'Desktop Expanded',
-        device: 'desktop',
-        sourceName: 'morph-2-expanded-panel:dt',
-        sourceBoard: null,
-        destinationNames: ['morph-1-expanded-panel:dt', 'morph-3-expanded-panel:dt'],
-        destinationBoards: null
-    },
-    {
-        name: 'Desktop Collapsed',
-        device: 'desktop',
-        sourceName: 'morph-2-collapsed-panel:dt',
-        sourceBoard: null,
-        destinationNames: ['morph-1-collapsed-panel:dt', 'morph-3-collapsed-panel:dt'],
-        destinationBoards: null
-    }
-];
 
 async function centerInViewport(layers) {
     const layerIds = layers.map(layer => layer.id);
@@ -98,130 +66,182 @@ async function centerInViewport(layers) {
     await batchPlay(commands, {});
 }
 
+function sortArtboardsByStep(configs) {
+    return configs.map(config => ({
+      ...config,
+      sequences: config.sequences.map(sequence => ({
+        ...sequence,
+        artboards: sequence.artboards
+          .slice()                              
+          .sort((a, b) => a.step - b.step)
+      }))
+    }));
+}
+  
+function insertToSequences(state, options) {
+
+    ////this insertion logic is clunky and could probably be refactored to use Maps instead
+    const sequenceBoard = {...options}
+    const sequencesArray = state.find((section) => section.device === options.device).sequences;
+    const sequenceObj = sequencesArray.find((sequence) => sequence.name === options.name);
+    sequenceObj.artboards.push(sequenceBoard);  
+    return state;
+}
+
+function makeArtboardEntry(options) {
+    const entry = {
+        name: options.name,
+        id: options.id,
+        step: options.step,
+        board: options.board
+    }
+    // artboardsArray.push(sequenceBoard);  
+    return entry;
+}
 
 async function cloneAndPositionArtboard(route) {
-    console.log("(Modal Action) Cloning and positioning artboard:", route.sourceBoard.name, route.sourceBoard.id);
     try {
-        //if step 0, use the destination name, otherwise we're going to use
-        console.log("(Modal Action) Destination Board Name:", route.destinationNames);    
-        console.log("(Modal Action) Source Board Name:", route.sourceBoard.name);
         const clonedBoards = [];
         for(let i = 0; i < route.destinationNames.length; i++) {
             try { 
-                //via duplicate
-                const destinationName = route.destinationNames[i];
+                const destinationName = route.destinationNames[i];                
                 const multiplier = (i & 1) ? -1 : 1;
                 let xOffsetPct = {_unit: "pixelsUnit", _value: route.step > 0 ? route.device === 'desktop' ? -2020 : -960 : route.device === 'desktop' ? -2020 : -960 };
                 let yOffsetPct = {_unit: "pixelsUnit", _value: route.step === 0 ? route.device === 'desktop' ? 817 * multiplier : 617 * multiplier : route.device === 'desktop' ? -817 * multiplier : -617 * multiplier};
-                console.log("(Modal Action) Translate To: ", xOffsetPct, yOffsetPct);
-                const newBoard = await route.sourceBoard.duplicate(route.sourceBoard, ElementPlacement.PLACEBEFORE, destinationName);   
+                const newBoard = await route.sourceBoard.duplicate(route.sourceBoard, multiplier > 0 ? ElementPlacement.PLACEBEFORE : ElementPlacement.PLACEAFTER, destinationName);   
                 newBoard.translate(xOffsetPct, yOffsetPct); 
-                // log("(Modal Action) New Board Move Result:", newBoard);
-                //await centerInViewport(existingBoards);
                 clonedBoards.push(newBoard);
+                const index = i=== 0 ? 1 : 3;
+                route.sequenceState.artboards.push(makeArtboardEntry({
+                    name: destinationName,
+                    id: newBoard.id,
+                    step: index,
+                    board: newBoard
+                }));
+                route.destinationBoards.push(newBoard);
             } catch (error) {
                 console.error("(Modal Action) Error moving new board:", error);
             }
         }
-        return clonedBoards;
+        return {boards: clonedBoards, state: route.sequenceState};
     } catch (error) {
         console.error("(Modal Action) Error cloning and positioning artboard:", error); 
         return [];
     }
 }
 
-async function normalizeAndPropagateRestStates(action, propagateOnly = false) { 
-    log("(Action Script) normalizeAndPropagateRestStates started.");
-    let executionResult = { success: false, message: "", count: 0 };  
+function pickByName(arr, names) {
+    return arr.filter(({ name }) => names.includes(name));
+}
+
+function pickSequences(data, devices, types) {
+    return data
+      .filter(({ device }) => devices.includes(device))
+      .flatMap(item => { 
+        const currentDevice = item.device;
+        return item.sequenceTypes
+          .filter(({ name }) => types.includes(name))
+          .map(sequence => ({
+            ...sequence,
+            device: currentDevice 
+        }));
+    });
+}
+
+async function normalizeAndPropagateRestStates(action, creativeState, propagateOnly = false) { 
     try {      
-        log("(Action) Attempting to convert all layers to smart objects and then propagate them to the velocity state boards (using executeAsModal)...");
-        // --- Execute Selection Logic within Modal Context --- 
         const result = await core.executeAsModal(async (executionContext) => {
-            log("(Modal Action) Starting to convert layers to smart objects...");
             const hostControl = executionContext.hostControl;
             const activeDoc = app.activeDocument;   
-            let successfulPropagations = 0;
-            const deviceBoardSubset = action.device === 'both' ? actionRoutes : actionRoutes.filter(route => route.device === action.device);
-
-
-            for (const actionRoute of deviceBoardSubset) {
-                actionRoute.sourceBoard = findValidGroups(activeDoc.layers, null, [actionRoute.sourceName])[0];
-                actionRoute.destinationBoards = findValidGroups(activeDoc.layers, null, actionRoute.destinationNames);
-            }
-
-            if(deviceBoardSubset.length === 0) {
+            logger.debug("Editing Creative Sections:");   
+            logger.debug("State:", creativeState);
+            logger.debug("Action:", action);
+            const newState = {...creativeState}            
+            const deviceTypes = Object.values(newState);
+            logger.debug("Device Types:", deviceTypes);
+            logger.debug("Action Sequences:", action.sequences);
+            const sequencesToEdit = deviceTypes.map((device) => device.sequences).map(seq => pickProps(seq, action.sequences));            
+            logger.debug("Sequences to Edit:", sequencesToEdit);
+            const actionRoutes = [];
+            ////i'm building these actionRoutes to nomalize the data structure when sending commands to photoshop action functions
+            sequencesToEdit.forEach((sequenceTypes) => {
+                for (const sequenceType in sequenceTypes) {
+                    const sequence = sequenceTypes[sequenceType];               
+                    const sourceName = replaceStep(sequence.artboardNamePattern, 2);
+                    const sourceBoard = findValidGroups(activeDoc.layers, null, buildArtBoardSearchRegex([sourceName]))[0];
+                    const endNames = [replaceStep(sequence.artboardNamePattern, 1), replaceStep(sequence.artboardNamePattern, 3)];///clunky and does not allow for more boards yet. should revisit if that changes on the studio side.                      
+                    ///push the existing artboard into the artboards array for this device-sequenceType property
+                    sequence.artboards.push(makeArtboardEntry({
+                        name: sourceName,
+                        id: sourceBoard.id,
+                        step: 2,
+                        board: sourceBoard
+                    }));
+                    actionRoutes.push({
+                        name: sequence.name,
+                        device: sequence.device,
+                        sourceName: sourceName,
+                        sourceBoard: sourceBoard,
+                        destinationNames: endNames,
+                        destinationBoards: [],
+                        sequenceState: sequence
+                    });
+                }
+            });        
+           
+            if(actionRoutes.length === 0) {
                 await core.showAlert("No valid boards found.");
                 return { success: false, message: "No valid boards found.", count: 0 };
             } else {
-                await toggleHistory(hostControl, "suspend", activeDoc.id, actionName);
                 try {
-                    for (let i = 0; i < deviceBoardSubset.length; i++) {
-                        const route = deviceBoardSubset[i];
-                        const sourceBoard = route.sourceBoard;
-                        const targetBoards = []//actionRoutes[i].destinationBoards;
-                        log(`(Modal Action) Processing board: ${sourceBoard.name} Found ${targetBoards.length} targets for propagation`);     
-                        let layerDuplicates = [];
-                        if (!propagateOnly) {
-                            try {
-                                //rasterize and convert all layers to smart objects
-                                const result = await convertAllLayersToSmartObjects(sourceBoard, rasterizeText, rasterizeLayerStyles);
-                                log(`(Modal Action) Finished converting layers to smart objects on ${sourceBoard.name}`);                                
-                                //then duplicate to velocity state boards
-                                
-                                //layerDuplicates = await duplicateBoardToBoard(sourceBoard, targetBoards);    
-                                layerDuplicates.push(...await cloneAndPositionArtboard(route));
-
-                                //log(`(Modal Action) Finished duplicating ${sourceBoard.name} layers to velocity state boards.`);    
-                            } catch (error) {
-                                console.error(`(Modal Action) Error converting or duplicating layers on ${sourceBoard.name}: ${error.message}`);
-                                // Potentially non-critical, continue loop
+                    await toggleHistory(hostControl, "suspend", activeDoc.id, action.name);
+                    let successfulPropagations = 0;
+                    for(const route of actionRoutes) {
+                        try {
+                            if (!propagateOnly) {
+                                const result = await convertAllLayersToSmartObjects(route.sourceBoard, rasterizeText, rasterizeLayerStyles);
+                                logger.debug("Convert and Rasterize Result:", result);
                             }
-                        } else {
-                            //layerDuplicates = await duplicateBoardToBoard(sourceBoard, targetBoards);
-                            layerDuplicates.push(...await cloneAndPositionArtboard(route));
-                            log(`(Modal Action) Finished duplicating ${sourceBoard.name} layers to velocity state boards.`); 
-                        }
-                        successfulPropagations += layerDuplicates.length;
-                        route.destinationBoards.push(...layerDuplicates);
-                        // for(const targetBoard of targetBoards) {
-                        //     targetBoard.visible = true;
-                        // }
+                            const {state, boards} = await cloneAndPositionArtboard(route);
+                            state.artboards = state.artboards.sort((a, b) => a.step - b.step);
+                            creativeState[state.device].sequences[state.name] = state;
+                            successfulPropagations += boards.length;    
 
-                        console.log(`(Modal Action) Completed propagation of ${sourceBoard.layers.length} layers to ${targetBoards.length} targets. ${layerDuplicates.length} new instances created.`);
-                    } 
+                        } catch (error) {
+                            console.error(`Error converting or duplicating layers on ${sourceBoard.name}: ${error.message}`);
+                            // Potentially non-critical, continue loop
+                        }
+                    }                                     
                     try {
-                        const allDestinationBoards = deviceBoardSubset.flatMap(o => o.destinationBoards);
+                        const allDestinationBoards = actionRoutes.flatMap(o => o.destinationBoards);
+                        logger.debug("All Destination Boards:", allDestinationBoards);
                         await centerInViewport(allDestinationBoards);
                     } catch (error) {
                         console.error("(Modal Action) Error centering cloned boards:", error);
-                    }
-                    let message = `Propagated layers to velocity state boards. Instances created: ${successfulPropagations}.`;
+                    }                    
+                    logger.debug("Return State:", creativeState);
                     await toggleHistory(hostControl, "resume", activeDoc.id);
-                    log("(Modal Action) normalizeAndPropagateRestStates finished successfully.");
-                    executionResult = { success: true, message: message, count: successfulPropagations };
-                    return executionResult;       
+                    let message = `Propagated layers to velocity state boards. Instances created: ${successfulPropagations}.`;
+                    return { success: true, message: message, payload: creativeState, count: successfulPropagations };   
+
                 } catch (error) {
                     console.error("(Modal Action) Error in normalizeAndPropagateRestStates:", error);
                     await toggleHistory(hostControl, "resume", activeDoc.id);
                     return { success: false, message: `Error: ${error.message || error}`, count: 0 };
-                }
+                }               
             }
-
         }, { "commandName": actionName });
-
         // --- Process Result from Modal --- 
         if (result.success) {
             const message = `Propagated ${result.count} layers to velocity state boards.`;
-            log(`(Action) ${message}`);
-            return { success: true, count: result.count, message: message };
+            logger.debug(result);
+            return result;
         } else {
             // Use the message from the modal if available, otherwise default
             const message = result.message || "An unexpected issue occurred during selection."; 
-            log(`(Action) ${message}`);
             await core.showAlert(message); 
-            return { success: false, count: 0, message: message };
+            return result;
         }
-
     } catch (error) {
         console.error("(Action Script) Error in normalizeAndPropagateRestStates:", error);
         await core.showAlert("An unexpected error occurred during normalizing and propagating rest states to velocity state boards. Check the console for details.");

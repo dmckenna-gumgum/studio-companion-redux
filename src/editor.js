@@ -18,22 +18,21 @@ const Editor = (() => {
 
     const stateHandler = {
         set: function(target, property, value) {
-            // logger.debug('SET: ', property, value);
             target[property] = value;
-            _notifyStateChange();
-            return true;
+            // logger.debug('setting state property:', target, property, value);
+            _notifyStateChange(state);
+            return target[property];
         },
         get: function(target, property) {
             return target[property];
         }
     };
 
-    function _notifyStateChange() {
+
+    function _notifyStateChange(state) {
+        // logger.debug('state change', state);
         if (_onUpdateCallback) {
-            _onUpdateCallback({
-                panel: 'editor',
-                newState: state
-            });
+            _onUpdateCallback(state);
         }
     }
 
@@ -45,6 +44,7 @@ const Editor = (() => {
 
 
     const _state = {
+        type: 'editor',
         element: getEl('#editor-menu'),
         behaviors: [
             {
@@ -162,7 +162,7 @@ const Editor = (() => {
         filterFeedbackElement: getEl('.plugin-filter-note'),
         filterTagToggles: getEls('.plugin-filters .plugin-tag'),
         scopeFilters: [],
-        filterRegex: '',
+        filterRegex: /^.*$/,
         actionBar: {
             element: getEl('#action-bar'),
             feedbackElement: getEl('#feedback')
@@ -175,6 +175,8 @@ const Editor = (() => {
         }
     }
     const state = new Proxy(_state, stateHandler);
+    let _creativeState = null,
+        creativeState = null;
 
     const _eventListeners = [];
     const registerEventListener = (eventConfig = {}) => {
@@ -190,15 +192,16 @@ const Editor = (() => {
     }
 
     const getSelectionViability = (layers) => {
-        logger.debug(layers);
         ///if some selected layers are groups, BUT not all of them are groups, then it's not viable - We don't want to be applying transformations
         /// to individual layers and artboards on the same action because it'll produce weird results.
         return !layers.some(item => item.kind === LayerKind.GROUP) && layers.every(item => item.kind !== LayerKind.GROUP)
     }
 
     const setCurrentSelection = (selection) => {
-        const _sel = {...getCurrentSelection()};
+        const _sel = {};//{...state.currentSelection};
         ///if empty selection reset to default
+        // logger.debug("(Editor) STARTING SET CURRENT", Date.now());
+        
         if(selection.length === 0) {
             _sel.viable = true;
             _sel.identical = false;
@@ -207,7 +210,7 @@ const Editor = (() => {
             state.currentSelection = _sel;
             return state.currentSelection;
         }
-
+        
         //check if the new selection is identical to the existing selection
         const isIdentical = proxyArraysEqual(selection, _sel.layers);
 
@@ -215,7 +218,8 @@ const Editor = (() => {
         const alreadyIdentical = isIdentical && _sel.identical;
         if(alreadyIdentical) return _sel;
 
-        ///otherwise either set to identical, or update viability and layers. Then return the current selection
+        
+        //otherwise either set to identical, or update viability and layers. Then return the current selection
         _sel.identical = isIdentical; 
         if(_sel.identical) {
             state.currentSelection = _sel;
@@ -225,8 +229,10 @@ const Editor = (() => {
             _sel.layers = selection;
             _sel.parentGroupCount = parentGroupCount(selection);
             state.currentSelection = _sel;
+            // logger.debug("(Editor) DONE SET CURRENT SELECTION", Date.now());
             return state.currentSelection;
         }
+        /**/
     }   
 
     const setButtonState = (buttonsActive) => {
@@ -269,7 +275,7 @@ const Editor = (() => {
     function handleLayerSelect(event, selection = []) {
         const newSelection = setCurrentSelection(selection);
         toggleActionBar(newSelection);
-        toggleButtons(newSelection.viable);
+        // toggleButtons(newSelection.viable);
     }
 
     function updateFilterUI(event, checked) {
@@ -335,18 +341,22 @@ const Editor = (() => {
 
     function toggleActionBar(selection = null) {
         if(!selection || selection.layers.length === 0) return state.actionBar.element.removeAttribute('open');    
-        state.actionBar.element.setAttribute('open', true);       
+        state.actionBar.element.setAttribute('open', true);     
+        
+        
         selection.parentGroupCount.size === 1 ? 
             state.actionBar.element.classList.replace('selection-many-groups', 'selection-same-groups') : 
             state.actionBar.element.classList.replace('selection-same-groups', 'selection-many-groups');
-
+        
+        let feedbackMessage;
         if(!selection.viable) {
-            state.actionBar.feedbackElement.textContent = `You've currently selected an artboard, or a mix of artboards and layers. Performing bulk actions on artboards is not supported`;
+            feedbackMessage = `You've currently selected an artboard, or a mix of artboards and layers. Performing bulk actions on artboards is not supported`;
             state.actionBar.element.classList.add('mixed-selection');
         } else { 
-            state.actionBar.feedbackElement.innerHTML = `<b>${selection.layers.length} layers</b> selected ${selection.parentGroupCount.size === 1 ? '<b>in the same Artboard</b>' : `across <b>${selection.parentGroupCount.size} Artboards</b>`}`;
+            feedbackMessage = `<span class='plugin-action-bar-pill'>${selection.layers.length} layers</span> selected ${selection.parentGroupCount.size === 1 ? ('<span class="plugin-action-bar-pill">in the same Artboard</span>') : (`across <span class='plugin-action-bar-pill'>${selection.parentGroupCount.size} Artboards</span>`)}`;
             state.actionBar.element.classList.remove('mixed-selection');
         }
+        state.actionBar.feedbackElement.innerHTML = feedbackMessage;
     }   
 
     // --- Editor Event Handlers --- 
@@ -363,7 +373,7 @@ const Editor = (() => {
                 restoreFocus();
                 behavior.callback?.(result.layers);
                 if (!result.success && result.message) { 
-                    await core.showAlert(result.message);
+                    // await core.showAlert(result.message);
                 } 
             } catch (err) {
                 logger.error(`DEBUG: Error calling ${behavior.name} action:`, err);
@@ -386,9 +396,10 @@ const Editor = (() => {
         behavior.callback?.(newFilters);
     }
 
-   const initializeSection = (onUpdate) => {
-    
-        _onUpdateCallback = onUpdate;
+   const init = (onUpdate, creative) => {
+        _onUpdateCallback = onUpdate;    
+        _creativeState = creative;
+        creativeState = new Proxy(_creativeState, stateHandler);
         
         state.behaviors.forEach(behavior => {
             /* EXAMPLE BEHAVIOR OBJECT
@@ -455,7 +466,7 @@ const Editor = (() => {
         const selectListener = new SelectListener({callback: handleLayerSelect});
         return state
     }
-    return { initializeSection };
+    return { init };
 })();
 
 

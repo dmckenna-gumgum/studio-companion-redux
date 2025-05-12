@@ -37,20 +37,21 @@ import '@swc-uxp-wrappers/dialog/sp-dialog.js';
 import '@swc-uxp-wrappers/divider/sp-divider.js';
 import '@swc-uxp-wrappers/tags/sp-tag.js';
 
-import { diff, patch } from "@opentf/obj-diff";
-
 import Editor from './editor.js';
 import Builder from './builder.js';
 
 // Configurations and Constants
 import { creativeConfigs } from "./js/constants/creativeConfigs.js";
 import { getPSTheme } from "./js/helpers/themeSetter.js";
-import { getEl, loadManifest } from "./js/helpers/utils.js";
+import { getEl, loadManifest, logInitData } from "./js/helpers/utils.js";
+import { createLogger } from './js/helpers/logger.js';
 
-const {versions, host, storage} = require('uxp');
-// const os = require('os').platform();
-// const arch = require('os').arch();
-const {arch, platform} = require('os');
+const { versions, host, storage } = require('uxp');
+const { app, action } = require('photoshop');
+const { arch, platform } = require('os');
+
+
+const logger = createLogger({ prefix: 'Plugin', initialLevel: 'DEBUG' });
 
 const Plugin = (() => {
     // UXP modules
@@ -69,17 +70,16 @@ const Plugin = (() => {
             },
             production: {
             }
-        }
+        },
     }
-    const creativeState = {
-        ...creativeConfigs.find(config => config.name === state.mode)
-    };
-
-
-    const handleStateChange = (params = {panel: null, newState: null}) => {
-        if(!params.panel || !params.newState) return;
-        state.sections[params.panel] = {...params.newState};
+    state.creative = {...creativeConfigs.find(config => config.name === state.mode)};
+    
+    const handleStateChange = (newState) => {
+    //const handleStateChange = (params = {panel: null, newState: null}) => {
+        if(!newState) return;
+        newState.type === 'creative' ? state[newState.type] = newState : state.sections[newState.type] = newState;
     }
+
     const {nav} = state.sections; 
 
     function setActiveMenu(event) {
@@ -92,6 +92,7 @@ const Plugin = (() => {
     async function applyTheme() {
         const themeValue = await getPSTheme();
         document.getElementById('theme').setAttribute("color", themeValue);
+        return themeValue;
     }
 
     async function loadPluginState() {
@@ -99,34 +100,53 @@ const Plugin = (() => {
         return manifest;
     }
 
+    function documentChangeHandler(eventType, descriptor) {
+        //logger.debug('documentChangeHandler', eventType, descriptor);
+        if (eventType === "select") {
+            const targetRef = descriptor._target?.[0]?._ref;
+            if (targetRef !== "document") {
+                return;
+            }
+        }        
+        logger.debug(`Active document changed: ${app.activeDocument.name}`);
+    }
+    
+    function watchActiveDocumentChange() {
+        const events = ["select", "open", "close"];
+        action.addNotificationListener(events.map(ev => ({ event: ev })), documentChangeHandler);
+    }
+
+    
     // --- Initialization ---
     const initializePanel = async () => {
         const manifest = await loadPluginState();
-        console.clear();
-        console.log("----------------------------------------------------------");
-        console.log("----------------------------------------------------------");
-        console.log('\n');
-        console.log('\n');
-        console.log(`Loaded: ${manifest.id}`);
-        console.log(`Version: ${manifest.version}`);
-        console.log(`UXP Version: ${versions.uxp}`);
-        console.log('\n');
-        console.log(`Requires Min ${host.name} Version: ${manifest.host[0].minVersion}`);
-        console.log(`User Running ${host.name} Version: ${host.version}`);
-        console.log(`On Platform: ${platform() === 'win32' ? 'Windows' : 'Mac'} ${arch()}`);
-        console.log('\n');
-        console.log('\n');
-        console.log("----------------------------------------------------------");
-        console.log("----------------------------------------------------------");
+        const applicationTheme = await applyTheme();
+        try {
+            const currentPlatform = platform();
+            const currentArch = arch();
+            logInitData(manifest, versions, host, app.activeDocument, currentArch, currentPlatform, applicationTheme);
+        } catch (error) {
+            console.error('Error logging initialization data', error);
+        }
 
         //Initialize Sections
-        state.sections.editor = Editor.initializeSection(handleStateChange);
-        state.sections.builder = Builder.initializeSection(handleStateChange);
+        try {
+            state.sections.editor = Editor.init(handleStateChange, state.creative);
+            state.sections.builder = Builder.init(handleStateChange, state.creative);
+        } catch (error) {
+            console.error('Error initializing sections', error);
+        }
 
         //Assign Event Listeners
         nav.element.addEventListener('change', setActiveMenu);
-        applyTheme();
         document.theme.onUpdated.addListener(applyTheme);  
+        try {
+            watchActiveDocumentChange();
+        } catch (error) {
+            logger.error('Error watching active document change', error);
+        }
+
+        console.log("Plugin initialized", state);
     }
 
     return { initializePanel, state }

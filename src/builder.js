@@ -1,48 +1,81 @@
 // Assistant Step Actions
-import { getEl, restoreFocus } from "./js/helpers/utils.js";
+import { getEl, restoreFocus, mergeArraysByKey, pickProps } from "./js/helpers/utils.js";
 import { normalizeAndPropagateRestStates } from "./js/buildActions/propagateRestState.js";
 import { propagateToIntro } from "./js/buildActions/propagateToIntro.js";
 import { revealAndPropagateToRestState } from "./js/buildActions/revealAndPropagateToRestState.js";
 import { readyPositioningForIntros } from "./js/buildActions/readyPositioningForIntros.js";
+import { createLogger } from './js/helpers/logger.js';
 const { core } = require("photoshop");
 let _onUpdateCallback = null;
+const logger = createLogger({ prefix: 'Builder', initialLevel: 'DEBUG' });
 const Builder = (() => {
 
-    const builderStateHandler = {
+    const stateHandler = {
         set: function(target, property, value) {
             target[property] = value;
-            _notifyStateChange();
+            _notifyStateChange(state);
             return true;
+        },
+        get: function(target, property) {
+            return target[property];
         }
     };
 
-    function _notifyStateChange() {
+
+    const creativeStateHandler = {
+        set: function(target, property, value) {
+            // console.log('creativeStateHandler', target, property, value);
+            target[property] = value;
+            _notifyStateChange(creativeState);
+            return true;
+        },
+        get: function(target, property) {
+            return target[property];
+        }
+    };
+
+
+    function _notifyStateChange(state) {
         if (_onUpdateCallback) {
             _onUpdateCallback({
-                panel: 'builder',
-                newState: builderState
+                newState: state
             });
         }
     }
-    
-    const _builderState = {
-        currentStep: 0,
+
+
+    const _state = {
+        type: 'builder',
+        element: getEl('#build-menu'),
+        currentStep: 3,
         buttonsActive: false,
         stepButtons: [
-            {
-                element: getEl('#btnNext'),
-                func: runStep,
-                options: ['next']
+            {    
+                description: 'Move to the next step',            
+                name: 'Next Step',
+                buttonElement: getEl('#btnNext'),
+                buttonId: 'btnNext',
+                actionReturns: null,
+                options: ['next'],
+                handlerFunc: runStep
             },
             {
-                element: getEl('#btnPrev'),
-                func: runStep,
-                options: ['prev']
+                description: 'Move to the previous step',            
+                name: 'Previous Step',
+                buttonElement: getEl('#btnPrev'),
+                buttonId: 'btnPrev',
+                actionReturns: null,
+                options: ['prev'],
+                handlerFunc: runStep
             },
             {
-                element: getEl('.plugin-sub-step-button'),
-                func: runStep,
-                options: ['substep']
+                description: 'Move to the next sub step',            
+                name: 'Next Sub Step',
+                buttonElement: getEl('.plugin-sub-step-button'),
+                buttonId: 'plugin-sub-step-button',
+                actionReturns: null,
+                options: ['substep'],
+                handlerFunc: runStep
             }
         ],
         infoElements: {
@@ -55,7 +88,7 @@ const Builder = (() => {
         },
         buildSteps: [
             {
-                id: 0,
+                id: 3,
                 name: "Design Desktop Rest States",
                 directions: "Start by building the designs for the desktop rest states of your Velocity. Velocity Ads have two device sizes, and each device size has an expanded and a collapsed rest state. Once you've completed these two boards click next and I'll convert any remaining raster or text layers to smart objects and move to the next step.",
                 ////NO ACTIONS ON THIS STEP
@@ -63,11 +96,12 @@ const Builder = (() => {
                 ///THIS ACTION RUNS WHEN YOU PRESS NEXT ON THIS STEP - IT'S THE ACTION THAT HAPPENS BETWEEN THIS STEP AND THE NEXT
                 nextAction: {
                     type: 'next',
-                    device: 'desktop',
+                    device: ['desktop'],
+                    sequences: ['expanded', 'collapsed'],
                     funcs: [normalizeAndPropagateRestStates],
-                    callbacks: [incrementStep],
+                    callbacks: [incrementStep, updateArtboardState],
                     options: [],
-                    name: 'Create Velocity Boards',
+                    name: 'Create Desktop Velocity Boards',
                     description: 'Rasterizing, Converting and Propagating The Desktop Rest State Layers to Velocity State Artboards'
                 },
             },
@@ -81,11 +115,12 @@ const Builder = (() => {
                 nextAction: {
                     type: 'next',
                     device: 'mobile',
+                    sequences: ['expanded', 'collapsed'],
                     funcs: [revealAndPropagateToRestState],
                     callbacks: [incrementStep],
                     options: ['mobile'],
                     name: 'Reveal Mobile Rest States',
-                    description: 'Reveal, Select, and Focus the Viewport on the Mobile Rest State Artboards'
+                    description: 'Propagate to, Reveal, and Focus the Mobile Rest State Artboards'
                 },
             },
             {
@@ -97,11 +132,12 @@ const Builder = (() => {
                 ///THIS ACTION RUNS WHEN YOU PRESS NEXT ON THIS STEP - IT'S THE ACTION THAT HAPPENS BETWEEN THIS STEP AND THE NEXT
                 nextAction: {
                     type: 'next',
-                    device: 'mobile',
+                    device: ['mobile'],
+                    sequences: ['expanded', 'collapsed'],
                     funcs: [normalizeAndPropagateRestStates],
-                    callbacks: [incrementStep],
+                    callbacks: [incrementStep, updateArtboardState],
                     options: [],
-                    name: 'Create Velocity Boards',
+                    name: 'Create Mobile Velocity Boards',
                     description: 'Rasterizing, Converting and Propagating The Mobile Rest State Layers to Velocity State Artboards'
                 },
             },
@@ -114,24 +150,26 @@ const Builder = (() => {
                 ///NEXT ACTION RUNS WHEN YOU PRESS "NEXT" BUTTON ON THIS STEP - THE STEP ONLY INCREMENTS IF THIS ACTION IS SUCCESSFUL
                 nextAction: {
                     type: 'next',
-                    device: 'desktop',
-                    funcs: [readyPositioningForIntros, propagateToIntro],
-                    callbacks: [incrementStep, incrementSubStep],
-                    options: ['desktop'],
+                    device: ['desktop'],
+                    sequences: ['intro'],
+                    funcs: [/*readyPositioningForIntros,*/ propagateToIntro],
+                    callbacks: [incrementStep, incrementSubStep, updateArtboardState],
+                    options: [],
                     name: 'Create Desktop Intro Board',
                     description: 'Clone the Desktop Expanded Artboard to Start a New Desktop Intro Artboard Sequence'
                 },
             },
             {
-                id: 3,
+                id: 4,
                 name: "Design Desktop Intro Sequence",
                 directions: "Now we'll create the desktop intro animation. It's best to storyboard this in reverse: from the expanded rest state. Click the plus button to the right to clone and add a descending artboard in this sequence.",
                 ////THIS ACTION CAN RUN MULTIPLE TIMES WITHIN THIS BUILD STEP
                 action: {
                     type: 'substep',
-                    device: 'desktop',
+                    device: ['desktop'],
+                    sequences: ['intro'],
                     funcs: [propagateToIntro],
-                    callbacks: [incrementSubStep],
+                    callbacks: [incrementSubStep, updateArtboardState],
                     options: ['desktop'],
                     name: 'Create Desktop Intro Board',
                     description: 'Clone the Last Intro Board Created, and Reorder the Numbering of the Artboards So This New Board is #1'
@@ -139,24 +177,26 @@ const Builder = (() => {
                 ///NEXT ACTION RUNS WHEN YOU PRESS "NEXT" BUTTON ON THIS STEP - THE STEP ONLY INCREMENTS IF THIS ACTION IS SUCCESSFUL
                 nextAction: {
                     type: 'next',
-                    device: 'mobile',
-                    funcs: [propagateToIntro],
-                    callbacks: [incrementStep, incrementSubStep],
+                    device: ['mobile'],
+                    sequences: ['intro'],
+                    funcs: [/*readyPositioningForIntros,*/ propagateToIntro],
+                    callbacks: [incrementStep, incrementSubStep, updateArtboardState],
                     options: ['mobile'],
                     name: 'Create Mobile Intro Board',
                     description: 'Clone the Mobile Expanded Artboard to Start a New Mobile Intro Artboard Sequence'
                 }
             },
             {
-                id: 4,
+                id: 5,
                 name: "Design Mobile Intro Sequence",
                 directions: "Now we'll do the same for the mobile size.  Click the plus button to the right to clone and add a descending artboard in this sequence.  When you're done, hit next and we'll finalize this project for animating.",
                 ////THIS ACTION CAN RUN MULTIPLE TIMES WITHIN THIS BUILD STEP
                 action: {
                     type: 'substep',
-                    device: 'mobile',
+                    device: ['mobile'],
+                    sequences: ['intro'],
                     funcs: [propagateToIntro],
-                    callbacks: [incrementSubStep],
+                    callbacks: [incrementSubStep, updateArtboardState],
                     options: ['mobile'],
                     name: 'Create Mobile Intro Board',
                     description: 'Clone the Mobile Expanded Artboard to Start a New Mobile Intro Artboard Sequence'
@@ -173,7 +213,7 @@ const Builder = (() => {
                 } 
             },
             {
-                id: 5,
+                id: 6,
                 name: "Prepare for Production",
                 directions: "You're almost done! Click finish and Studio Companion will do its best to prep your file for Studio. If you'd prefer to do this manually, click on the Production tab on the left and we'll provide some tools to make that process easier.",
                 ////NO ACTIONS ON THIS STEP
@@ -193,8 +233,23 @@ const Builder = (() => {
         }
     }   
 
-    
-    const builderState = new Proxy(_builderState, builderStateHandler);
+    const state = new Proxy(_state, stateHandler);
+    let _creativeState = null,
+        creativeState = null;
+
+
+    const _eventListeners = [];
+    const registerEventListener = (eventConfig = {}) => {
+        eventConfig.eventHandler = async (e) => eventConfig.handlerFunc(e, eventConfig);
+        eventConfig.listener = eventConfig.element.addEventListener(eventConfig.eventType, eventConfig.eventHandler);
+        _eventListeners.push(eventConfig);
+    }
+
+    const destroyEventListener = (eventListener) => {
+        if(!eventListener.element || !eventListener.event || !eventListener.handlerFunc) return;
+        eventListener.element.removeEventListener(eventListener.event, eventListener.eventHandler);
+        _eventListeners.splice(_eventListeners.indexOf(eventListener), 1);
+    }
     //////everything here needs to be sorted into the plugin object eventually
     const legacyBuilderState = {
         introSteps: {
@@ -210,31 +265,39 @@ const Builder = (() => {
     
     const setIntroSteps = (device, step) => {
         ///these are temporary until i'm properly pushing created intro boards into the config above, then i can use length of those arrays rather than a separate number 
-        console.log('setIntroSteps', device, step);
+        // logger.debug('setIntroSteps', device, step);
         return legacyBuilderState.introSteps[device] = step;
     }
 
     const setBuildStep = (step) => {
-        return builderState.currentStep = step;
+        return state.currentStep = step;
     }
 
     const getBuildStep = () => {
-        return builderState.currentStep;
+        return state.currentStep;
     }
+
+    
    //////////////////////////////////////
     ////////////BUILD ACTIONS/////////////
     //////////////////////////////////////
-    async function runStep(type = 'next') {  
+    async function runStep(event, config) {  
         const currentStep = getBuildStep();
-        const buildStep = builderState.buildSteps[currentStep];
-        const action = type === 'next' ? buildStep.nextAction : buildStep.action;
+        const buildStep = state.buildSteps[currentStep];
+        const action = config.options[0] === 'next' ? buildStep.nextAction : buildStep.action;
+        // const creativeSections = creativeState.devices.filter(item => action.device.includes(item.device));
+        logger.debug('state pre-send',creativeState)
+        const stateToPass = pickProps(creativeState.devices, action.device);
+        logger.debug('runStep', action, stateToPass);
         try {
-            const results = await executeStepAction(action);
-            console.log('results', results);
+            const results = await executeStepAction(action, stateToPass);
             if(results.every(result => result.success)) {
-                action.callbacks?.forEach(callback => callback(action));
+                results.forEach((result) => {
+                    action.callbacks?.forEach(callback => callback?.(action, result));
+                });
+                restoreFocus();
             } else {
-                // await core.showAlert(results.find(result => !result.success).message);
+                //await core.showAlert(results.find(result => !result.success).message);
             }
         } catch (error) {
             console.error('Error executing step action:', error);
@@ -242,21 +305,20 @@ const Builder = (() => {
         }
     }
 
-    async function executeStepAction(action) {
+    async function executeStepAction(action, stateToPass) {
         const {name, type, funcs, description, device} = action;
-        action.step = getIntroSteps(device);
-        console.log(`DEBUG: On ${type === 'substep' ? 'Substep' : 'Step'}: ${action.step+1}. User click initiated: ${name}, which will: ${description}`);
+        // logger.debug(`DEBUG: On ${type === 'substep' ? 'Substep' : 'Step'}: ${action.step+1}. User click initiated: ${name}, which will: ${description}`);
         try {
-            console.log(`DEBUG: Action Payload:`, action);
-            const results =[];
-            await funcs?.forEach(async func => {
-                const result = await func(action); 
-                results.push(result);
-                if (!result.success && result.message) { 
-                    // await core.showAlert(result.message);
-                } 
-            });
-            restoreFocus();
+            // logger.debug(`DEBUG: Action:`, action, creativeSection);
+            let results =[];
+            funcs && (results = await Promise.all(funcs.map(async func => {
+                    const result = await func(action, stateToPass);
+                    if (!result.success && result.message) {
+                        // await core.showAlert(result.message);
+                    }
+                    return result;
+                }
+            )));
             return results;
         } catch (err) {
             console.error(`Error calling ${name} action:`, err);
@@ -265,56 +327,68 @@ const Builder = (() => {
         }    
     }
 
+    function updateArtboardState(action, result) {
+        logger.debug(`${action.name} Completed. Updating Creative State With:`, result.payload);
+        if (!result.payload || !creativeState.devices) return;        
+        creativeState.devices = {...creativeState.devices, ...result.payload.devices}
+        logger.debug('creativeState', creativeState);
+        //mergeArraysByKey(creativeState.devices, result.payload, 'device');
+    }
 
-    function incrementSubStep(action) {
+    function incrementSubStep(action, results) {
         // buildStep.options[1] = setIntroSteps(buildStep.device, getIntroSteps(buildStep.device)+1);
         const introSteps = setIntroSteps(action.device, getIntroSteps(action.device)+1);
-        console.log(`DEBUG:${action.device} Intro Sequence Now Has ${introSteps} Steps`);
+        //logger.debug(`DEBUG:${action.device} Intro Sequence Now Has ${introSteps} Steps`);
     } 
 
     function incrementStep(action) {   
-        const currentStep = setBuildStep(Math.min(getBuildStep()+1, builderState.buildSteps.length-1));
-        console.log('currentStep', currentStep);
-        const buildStep = builderState.buildSteps[currentStep];
-        console.log(`DEBUG: Incrementing To Main Step: ${currentStep+1}, named: ${buildStep.name}`); 
+        const currentStep = setBuildStep(Math.min(getBuildStep()+1, state.buildSteps.length-1));
+        const buildStep = state.buildSteps[currentStep];
+        //console.log(`DEBUG: Incrementing To Main Step: ${currentStep+1}, named: ${buildStep.name}`); 
         updateBuildInterface(buildStep);
     }
 
     function updateBuildInterface(buildStep) {
         const currentStep = getBuildStep();
-        builderState.infoElements.stepNumber.textContent = `Step ${currentStep+1}:`;
-        builderState.infoElements.stepName.textContent = buildStep.name;
-        builderState.infoElements.stepText.textContent = buildStep.directions;
-        const progressWidth = Math.max(5, currentStep/(builderState.buildSteps.length-1)*100);
-        builderState.infoElements.progressBarFill.style.width = `${progressWidth}%`;  
+        // console.log(currentStep,  state.infoElements)
+        state.infoElements.stepNumber.textContent = `Step ${currentStep+1}:`;
+        state.infoElements.stepName.textContent = buildStep.name;
+        state.infoElements.stepText.textContent = buildStep.directions;
+        const progressWidth = Math.max(5, currentStep/(state.buildSteps.length-1)*100);
+        state.infoElements.progressBarFill.style.width = `${progressWidth}%`;  
         if (currentStep === 4) {
-        builderState.infoElements.nextButton.textContent = 'Finish';
+        // state.infoElements.nextButton.textContent = 'Finish';
         }
         if(buildStep.action !== null) {
-            builderState.infoElements.subUi.classList.add('-show');
+            state.infoElements.subUi.classList.add('-show');
         } else {
-            builderState.infoElements.subUi.classList.remove('-show');
+            state.infoElements.subUi.classList.remove('-show');
         }
     }
 
-    function _notifyStateChange() {
-        if (_onUpdateCallback) {
-            _onUpdateCallback({
-                panel: 'builder',
-                state: {...builderState}
-            });
-        }
-    }
-
-   const initializeSection = (onUpdate) => {
-
+   const init = (onUpdate, creative) => {
         _onUpdateCallback = onUpdate;
-
-        builderState.stepButtons.forEach(button => {
-            button.element.addEventListener('click', async (event) => { await button.func(button.options[0]); });
-        });
+        _creativeState = creative;
+        creativeState = new Proxy(_creativeState, creativeStateHandler);
+        state.stepButtons.forEach(button => {
+            const eventObj = {
+                eventName: `${button.name}_Handler`,
+                eventType: 'click',
+                name: button.name,
+                description: button.description,
+                actionReturns: null,
+                element: button.buttonElement,
+                elementId: button.buttonId,
+                action: null, ///handlerFunc will pick the action based on buildstep instead
+                options: button.options,
+                callback: null,
+                handlerFunc: button.handlerFunc
+            }
+            registerEventListener(eventObj);
+        });  
+        return state
     }
-    return { initializeSection };
+    return { init };
 })();
 
 export default Builder;

@@ -1,6 +1,7 @@
 // client/js/actions/selectLayersByName.js
 const { app, core, action } = require('photoshop');
 const batchPlay = action.batchPlay;
+import { findValidGroups } from '../helpers/helpers.js';
 
 async function selectLayersByName(filter, options) { 
     console.log("(Action) Attempting to select layers matching current selection (using executeAsModal)...");
@@ -10,7 +11,7 @@ async function selectLayersByName(filter, options) {
         if (!currentlySelectedLayers || currentlySelectedLayers.length === 0) {
             const message = "No layers are currently selected. Please select one or more layers first.";
             console.log("(Action) No layers initially selected.");
-            await core.showAlert(message);
+            // await core.showAlert(message);
             return { success: false, message: message };
         }
 
@@ -19,7 +20,8 @@ async function selectLayersByName(filter, options) {
 
         // --- Execute Selection Logic within Modal Context --- 
         const result = await core.executeAsModal(async (executionContext) => {
-            const allLayers = app.activeDocument.layers; 
+            const searchScope = findValidGroups(app.activeDocument.layers, null, filter);
+            //const allLayers = app.activeDocument.layers; 
             const matchingLayerIds = [];
 
             // Recursive function to find matching layer IDs (defined inside modal)
@@ -37,7 +39,7 @@ async function selectLayersByName(filter, options) {
             }
 
             console.log("(Modal Action) Starting recursive search for matching layer IDs...");
-            findMatchingLayerIds(allLayers);
+            findMatchingLayerIds(searchScope);
             console.log(`(Modal Action) Found ${matchingLayerIds.length} matching layer IDs:`, matchingLayerIds);
 
             // History state for undo
@@ -110,7 +112,7 @@ async function selectLayersByName(filter, options) {
         const message = `Error selecting matching layers: ${e.message || e}`;
         // Avoid showing alert if the error was just 'No layers selected initially'
         if (!message.startsWith("No layers are currently selected")) {
-             await core.showAlert("An error occurred while selecting matching layers.");
+            //  await core.showAlert("An error occurred while selecting matching layers.");
         }
         return { success: false, message: message, error: e.message || e };
     }
