@@ -8,11 +8,13 @@
 <body>
     
     <script src="main.bundle.js"></script>
-    <sp-theme id="theme" system="express" color="dark"scale="medium" global>
+    <sp-theme id="theme" system="express" color="dark" scale="medium" global>
         <div class="plugin-container">
             <div class="plugin-header">
                 <h2 id="plugin-title" class="plugin-title">Velocity: Editor</h3>
-                <div id="plugin-history">
+                <div class="plugin-history" id="buildHistory">
+                    <span class="plugin-history-label">Revert To Step:</span>
+                    <sp-button-group id="buildHistoryButtons" size="s"></sp-button-group>
                 </div>
             </div>
             <div class="plugin-main">

@@ -485,3 +485,29 @@ sp-action-bar.mixed-selection .plugin-action-bar-feedback {
 .plugin-dialog-button-primary {
   flex: 1  1 auto;
 }
+
+.plugin-history {
+    display: none;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-content: center;
+    align-items: center;
+}
+
+.plugin-history.-show {
+    display: flex;
+}
+
+.plugin-history sp-button-group {
+  margin-left: 0.4rem;
+}
+
+.plugin-history-btn {
+    margin: 0 0.25rem;
+    --spectrum-button-min-width: 0.75rem;
+    --spectrum-button-edge-to-visual: 1.25rem;
+    --spectrum-button-edge-to-text: 1.25rem;
+    --spectrum-button-height: 1.125rem;
+    --spectrum-button-font-size: 0.625rem;
+    --spectrum-button-bottom-to-text: 0.4rem;
+}

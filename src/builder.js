@@ -49,6 +49,11 @@ const Builder = (() => {
         element: getEl('#build-menu'),
         currentStep: 0,
         buttonsActive: false,
+        buildHistory: {
+            containerEl: getEl('#buildHistory'),
+            buttonGroup: getEl('#buildHistoryButtons'),
+            history: [],
+        },
         stepButtons: [
             {    
                 description: 'Move to the next step',            
@@ -296,6 +301,14 @@ const Builder = (() => {
     ////////////BUILD ACTIONS/////////////
     //////////////////////////////////////
     async function runStep(event, config) {  
+
+        ///before running step capture a snapshot of the current state;
+        try {
+            await saveSnapshot();
+        } catch (error) {
+            logger.error('snapshot error', error);
+        }
+
         console.log('runStep', config);
         const currentStep = getBuildStepNumber();
         console.log('currentStep', currentStep);
@@ -411,19 +424,78 @@ const Builder = (() => {
         const buildStep = getBuildStep();
         //console.log(`DEBUG: Incrementing To Main Step: ${currentStep+1}, named: ${buildStep.name}`); 
         updateBuildInterface(buildStep);
-        //saveSnapshot();
+        
     }
 
     async function saveSnapshot() {
-        // await History.capture(`Step_${getBuildStepNumber()+1}`);
-        // const historyContainer = getEl('#plugin-history');
-        // const btnMarkup = document.createElement(`<sp-action-button id="historyBtn" label="History" value="Step_${getBuildStepNumber()+1}"></sp-action-button>`);
-        // historyContainer.appendChild(btnMarkup);
-        // const btn = getEl('#historyBtn');
-        // btn.addEventListener('click', async () => {
-        //     await History.restore(btn.value);
-        // });
-        
+        try {
+            const stepNumber = getBuildStepNumber();
+            const snapShotName = `Step_${stepNumber}`;
+            await History.capture(snapShotName);
+            createHistoryEntry(snapShotName, stepNumber);
+            updateHistoryUI();
+        } catch (error) {
+            return error;
+        }
+    }
+    
+    function updateHistoryUI() {
+        if(state.buildHistory.history.length > 0) {
+            state.buildHistory.containerEl.classList.add('-show');
+        } else {
+            state.buildHistory.containerEl.classList.remove('-show');
+        }
+    }
+    
+    function createHistoryEntry(snapShotName, stepNumber) {
+        try {
+            const newHistoryEntry = {};
+            newHistoryEntry.stepNumber = stepNumber;
+            newHistoryEntry.snapshotName = snapShotName;
+            const btnMarkup = document.createElement(`sp-button`);
+            btnMarkup.classList.add('plugin-history-btn');
+            btnMarkup.id = `historyBtn_${stepNumber}`;
+            btnMarkup.textContent = `${stepNumber+1}`;
+            btnMarkup.setAttribute('data-step', stepNumber);
+            btnMarkup.setAttribute('size', 's');
+            btnMarkup.setAttribute('treatment', 'outline');
+            btnMarkup.setAttribute('variant', 'secondary');
+            btnMarkup.setAttribute('data-snapshot', snapShotName);  
+            newHistoryEntry.buttonEl =state.buildHistory.buttonGroup.appendChild(btnMarkup);
+            const eventObj = {
+                eventName: `HistoryStep_${stepNumber}`,
+                eventType: 'click',
+                name: `HistoryStep_${stepNumber}`,
+                description: `Revert History to Step ${stepNumber}`,
+                actionReturns: null,
+                action: revertToSnapshot,
+                options: [snapShotName, stepNumber],
+                element: newHistoryEntry.buttonEl,
+                elementId: `historyBtn_${stepNumber}`,
+                handlerFunc: revertHandler
+            }
+            registerEventListener(eventObj);
+            state.buildHistory.history.push(newHistoryEntry);
+        } catch (error) {
+            return error;
+        }
+    }
+
+    function clearSnapshots() {
+        History.clear();
+    }
+    function revertHandler(event, config) {
+        logger.log('revertHandler', event, config);
+        const snapshotName = event.target.getAttribute('data-snapshot');
+        const stepNumber = event.target.getAttribute('data-step');
+        logger.log('revertHandler', snapshotName, stepNumber);
+        revertToSnapshot(snapshotName, stepNumber);
+    }
+    function revertToSnapshot(snapshotName, stepNumber) {
+        console.log('revertToSnapshot', snapshotName, stepNumber);
+        History.restore(snapshotName);
+        setBuildStep(stepNumber);
+        updateBuildInterface(getBuildStep());
     }
 
     function updateBuildInterface(buildStep) {
