@@ -4,7 +4,7 @@ const { batchPlay } = action;
 const { ElementPlacement } = constants;
 
 import {replaceStep, buildArtBoardSearchRegex, findInArray, pickProps} from '../helpers/utils.js';
-import {findValidGroups, toggleHistory, duplicateBoardToBoard, convertAllLayersToSmartObjects } from '../helpers/helpers.js';
+import {findValidGroups, toggleHistory, duplicateBoardToBoard, convertAllLayersToSmartObjects, moveBoardAndGuide, getGuidesForFrame, getArtboardFrame } from '../helpers/helpers.js';
 import { createLogger } from '../helpers/logger.js';
 
 const logger = createLogger({ prefix: 'normalizeAndPropagateRestStates', initialLevel: 'DEBUG' });
@@ -77,16 +77,6 @@ function sortArtboardsByStep(configs) {
       }))
     }));
 }
-  
-function insertToSequences(state, options) {
-
-    ////this insertion logic is clunky and could probably be refactored to use Maps instead
-    const sequenceBoard = {...options}
-    const sequencesArray = state.find((section) => section.device === options.device).sequences;
-    const sequenceObj = sequencesArray.find((sequence) => sequence.name === options.name);
-    sequenceObj.artboards.push(sequenceBoard);  
-    return state;
-}
 
 function makeArtboardEntry(options) {
     const entry = {
@@ -108,8 +98,14 @@ async function cloneAndPositionArtboard(route) {
                 const multiplier = (i & 1) ? -1 : 1;
                 let xOffsetPct = {_unit: "pixelsUnit", _value: route.step > 0 ? route.device === 'desktop' ? -2020 : -960 : route.device === 'desktop' ? -2020 : -960 };
                 let yOffsetPct = {_unit: "pixelsUnit", _value: route.step === 0 ? route.device === 'desktop' ? 817 * multiplier : 617 * multiplier : route.device === 'desktop' ? -817 * multiplier : -617 * multiplier};
+                // const boardFrame = await getArtboardFrame(route.sourceBoard);
+                // const existingGuides = await getGuidesForFrame(boardFrame);
                 const newBoard = await route.sourceBoard.duplicate(route.sourceBoard, multiplier > 0 ? ElementPlacement.PLACEBEFORE : ElementPlacement.PLACEAFTER, destinationName);   
+                //const newGuides = await cloneGuidesForFrame(route.sourceBoard);
+                // logger.log("new guides created:", newGuides);
                 newBoard.translate(xOffsetPct, yOffsetPct); 
+                // await moveBoardAndGuide(newBoard, xOffsetPct, yOffsetPct, existingGuides);
+                
                 clonedBoards.push(newBoard);
                 const index = i=== 0 ? 1 : 3;
                 route.sequenceState.artboards.push(makeArtboardEntry({
@@ -148,7 +144,9 @@ function pickSequences(data, devices, types) {
     });
 }
 
-async function normalizeAndPropagateRestStates(action, creativeState, propagateOnly = false) { 
+const propagateOnly = false;
+
+async function normalizeAndPropagateRestStates(action, creativeState, options) { 
     try {      
         const result = await core.executeAsModal(async (executionContext) => {
             const hostControl = executionContext.hostControl;

@@ -3,7 +3,10 @@ const { app, core, constants, action } = require('photoshop');
 const { batchPlay } = action;
 const { ElementPlacement } = constants;
 import { buildArtBoardSearchRegex } from '../helpers/utils.js';
-import {findValidGroups, toggleHistory, duplicateAndMoveToBottom, convertAllLayersToSmartObjects, log } from '../helpers/helpers.js';
+import {findValidGroups, toggleHistory, duplicateAndMoveToBottom } from '../helpers/helpers.js';
+import { createLogger } from '../helpers/logger.js';
+
+const logger = createLogger({ prefix: 'revealAndPropagateToRestState', initialLevel: 'DEBUG' });
 const actionName = 'Propagate Rest States to Velocity State Boards';
 
 const rasterizeText = true;
@@ -79,14 +82,14 @@ async function centerInViewport(layers) {
     await batchPlay(commands, {});
 }
 
-async function revealAndPropagateToRestState(action) { 
-    log("(Action Script) revealAndPropagateToRestState started.");
+async function revealAndPropagateToRestState(action, creativeState, options) { 
+    logger.debug("(Action Script) revealAndPropagateToRestState started.");
     let executionResult = { success: false, message: "", count: 0 };  
     try {      
-        log("(Action) Attempting to reveal and focus rest state artboards for a given device (using executeAsModal)...");
+        logger.debug("(Action) Attempting to reveal and focus rest state artboards for a given device (using executeAsModal)...");
         // --- Execute Selection Logic within Modal Context --- 
         const result = await core.executeAsModal(async (executionContext) => {
-            log("(Modal Action) Starting to convert layers to smart objects...");
+            logger.debug("(Modal Action) Starting to convert layers to smart objects...");
             const hostControl = executionContext.hostControl;
             const activeDoc = app.activeDocument;   
             const deviceBoardSubset = action.device === 'both' ? actionRoutes : actionRoutes.filter(route => route.device === action.device);
@@ -94,7 +97,7 @@ async function revealAndPropagateToRestState(action) {
                 actionRoute.sourceBoard = findValidGroups(activeDoc.layers, null, buildArtBoardSearchRegex([actionRoute.sourceName]))[0];
                 actionRoute.destinationBoards = findValidGroups(activeDoc.layers, null, buildArtBoardSearchRegex([actionRoute.destinationNames]));
             }
-            console.log("(Modal Action) Device Board Subset:", deviceBoardSubset);
+            logger.debug("(Modal Action) Device Board Subset:", deviceBoardSubset);
 
             if(deviceBoardSubset.length === 0) {
                 await core.showAlert("No valid boards found.");
@@ -116,17 +119,17 @@ async function revealAndPropagateToRestState(action) {
 
                             }
                         }
-                        log(`(Modal Action) Processing board: ${sourceBoard.name}`); 
+                        logger.debug(`(Modal Action) Processing board: ${sourceBoard.name}`); 
                     } 
                     try {
                         const allDestinationBoardId = deviceBoardSubset.flatMap(o => o.destinationBoards);
-                        console.log("(Modal Action) Focusing These Destination Boards:", allDestinationBoardId);
+                        logger.debug("(Modal Action) Focusing These Destination Boards:", allDestinationBoardId);
                         await centerInViewport(allDestinationBoardId);
                     } catch (error) {
                         console.error("(Modal Action) Error centering cloned boards:", error);
                     }
                     await toggleHistory(hostControl, "resume", activeDoc.id);
-                    log("(Modal Action) revealAndPropagateToRestState finished successfully.");
+                    logger.debug("(Modal Action) revealAndPropagateToRestState finished successfully.");
                     executionResult = { success: true, message: "Revealed and focused rest state boards.", count: deviceBoardSubset.length };
                     return executionResult;       
                 } catch (error) {
@@ -141,12 +144,12 @@ async function revealAndPropagateToRestState(action) {
         // --- Process Result from Modal --- 
         if (result.success) {
             const message = `Revealed and focused ${result.count} rest state boards.`;
-            log(`(Action) ${message}`);
+            logger.debug(`(Action) ${message}`);
             return { success: true, count: result.count, message: message };
         } else {
             // Use the message from the modal if available, otherwise default
             const message = result.message || "An unexpected issue occurred during selection."; 
-            log(`(Action) ${message}`);
+            logger.debug(`(Action) ${message}`);
             await core.showAlert(message); 
             return { success: false, count: 0, message: message };
         }

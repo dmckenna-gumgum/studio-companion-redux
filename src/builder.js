@@ -5,10 +5,11 @@ import { propagateToIntro } from "./js/buildActions/propagateToIntro.js";
 import { revealAndPropagateToRestState } from "./js/buildActions/revealAndPropagateToRestState.js";
 import { readyPositioningForIntros } from "./js/buildActions/readyPositioningForIntros.js";
 import { createLogger } from './js/helpers/logger.js';
+import History from './js/helpers/history.js';
 const { core } = require("photoshop");
 let _onUpdateCallback = null;
-const logger = createLogger({ prefix: 'Builder', initialLevel: 'DEBUG' });
 const Builder = (() => {
+    const logger = createLogger({ prefix: 'Builder', initialLevel: 'INFO' });
 
     const stateHandler = {
         set: function(target, property, value) {
@@ -21,10 +22,9 @@ const Builder = (() => {
         }
     };
 
-
     const creativeStateHandler = {
         set: function(target, property, value) {
-            // console.log('creativeStateHandler', target, property, value);
+            console.log('creativeStateHandler', target, property, value);
             target[property] = value;
             _notifyStateChange(creativeState);
             return true;
@@ -47,7 +47,7 @@ const Builder = (() => {
     const _state = {
         type: 'builder',
         element: getEl('#build-menu'),
-        currentStep: 3,
+        currentStep: 0,
         buttonsActive: false,
         stepButtons: [
             {    
@@ -71,8 +71,8 @@ const Builder = (() => {
             {
                 description: 'Move to the next sub step',            
                 name: 'Next Sub Step',
-                buttonElement: getEl('.plugin-sub-step-button'),
-                buttonId: 'plugin-sub-step-button',
+                buttonElement: getEl('#btnAddStep'),
+                buttonId: '#btnAddStep',
                 actionReturns: null,
                 options: ['substep'],
                 handlerFunc: runStep
@@ -88,7 +88,7 @@ const Builder = (() => {
         },
         buildSteps: [
             {
-                id: 3,
+                id: 0,
                 name: "Design Desktop Rest States",
                 directions: "Start by building the designs for the desktop rest states of your Velocity. Velocity Ads have two device sizes, and each device size has an expanded and a collapsed rest state. Once you've completed these two boards click next and I'll convert any remaining raster or text layers to smart objects and move to the next step.",
                 ////NO ACTIONS ON THIS STEP
@@ -98,9 +98,12 @@ const Builder = (() => {
                     type: 'next',
                     device: ['desktop'],
                     sequences: ['expanded', 'collapsed'],
-                    funcs: [normalizeAndPropagateRestStates],
+                    functions: [
+                        {id: 1, doIt:normalizeAndPropagateRestStates, options: {device: ['desktop'], sequences: ['expanded', 'collapsed']}},
+                        //{id: 2, doIt:readyPositioningForIntros, options: {device: ['desktop'], sequences: ['expanded', 'collapsed']}},
+                    ],
+                    // funcs: [normalizeAndPropagateRestStates],
                     callbacks: [incrementStep, updateArtboardState],
-                    options: [],
                     name: 'Create Desktop Velocity Boards',
                     description: 'Rasterizing, Converting and Propagating The Desktop Rest State Layers to Velocity State Artboards'
                 },
@@ -116,7 +119,9 @@ const Builder = (() => {
                     type: 'next',
                     device: 'mobile',
                     sequences: ['expanded', 'collapsed'],
-                    funcs: [revealAndPropagateToRestState],
+                    functions: [
+                        {id: 1, doIt:revealAndPropagateToRestState, options: {device: ['mobile'], sequences: ['expanded', 'collapsed']}}
+                    ],
                     callbacks: [incrementStep],
                     options: ['mobile'],
                     name: 'Reveal Mobile Rest States',
@@ -134,7 +139,9 @@ const Builder = (() => {
                     type: 'next',
                     device: ['mobile'],
                     sequences: ['expanded', 'collapsed'],
-                    funcs: [normalizeAndPropagateRestStates],
+                    functions: [
+                        {id: 1, doIt:normalizeAndPropagateRestStates, options: {device: ['mobile'], sequences: ['expanded', 'collapsed']}}
+                    ],
                     callbacks: [incrementStep, updateArtboardState],
                     options: [],
                     name: 'Create Mobile Velocity Boards',
@@ -152,7 +159,10 @@ const Builder = (() => {
                     type: 'next',
                     device: ['desktop'],
                     sequences: ['intro'],
-                    funcs: [/*readyPositioningForIntros,*/ propagateToIntro],
+                    functions: [
+                        //{id: 1, doIt:readyPositioningForIntros, options: {device: ['desktop'], sequences: ['intro']}},
+                        {id: 2, doIt:propagateToIntro, options: {device: ['desktop'], sequences: ['intro'], callbacks: [incrementStep, incrementSubStep, updateArtboardState]}}
+                    ],
                     callbacks: [incrementStep, incrementSubStep, updateArtboardState],
                     options: [],
                     name: 'Create Desktop Intro Board',
@@ -168,7 +178,7 @@ const Builder = (() => {
                     type: 'substep',
                     device: ['desktop'],
                     sequences: ['intro'],
-                    funcs: [propagateToIntro],
+                    functions: [{id: 1, doIt:propagateToIntro, options: {device: ['desktop'], sequences: ['intro']}}],
                     callbacks: [incrementSubStep, updateArtboardState],
                     options: ['desktop'],
                     name: 'Create Desktop Intro Board',
@@ -179,7 +189,7 @@ const Builder = (() => {
                     type: 'next',
                     device: ['mobile'],
                     sequences: ['intro'],
-                    funcs: [/*readyPositioningForIntros,*/ propagateToIntro],
+                    functions: [{id: 1, doIt:propagateToIntro, options: {device: ['mobile'], sequences: ['intro']}}],
                     callbacks: [incrementStep, incrementSubStep, updateArtboardState],
                     options: ['mobile'],
                     name: 'Create Mobile Intro Board',
@@ -195,7 +205,7 @@ const Builder = (() => {
                     type: 'substep',
                     device: ['mobile'],
                     sequences: ['intro'],
-                    funcs: [propagateToIntro],
+                    functions: [{id: 1, doIt:propagateToIntro, options: {device: ['mobile'], sequences: ['intro']}}],
                     callbacks: [incrementSubStep, updateArtboardState],
                     options: ['mobile'],
                     name: 'Create Mobile Intro Board',
@@ -205,7 +215,7 @@ const Builder = (() => {
                 nextAction: {
                     type: 'next',
                     device: 'both',
-                    funcs: [null], ///this will be a convert and sanitization action,
+                    functions: [{id: 1, doIt:null, options: {device: ['desktop', 'mobile'], sequences: ['intro']}}], ///this will be a convert and sanitization action,
                     callbacks: [incrementStep],
                     options: [],
                     name: 'Finalize Project',
@@ -220,7 +230,7 @@ const Builder = (() => {
                 action: null,
                 nextAction: {
                     type: 'next',
-                    funcs: [null], ///this will be a convert and sanitization action,
+                    functions: [{id: 1, doIt:null, options: {device: ['desktop', 'mobile'], sequences: ['intro']}}], ///this will be a convert and sanitization action,
                     options: ['mobile'],
                     name: 'Move into Studio',
                     description: 'Move the Project into Studio' //maybe one day this can be done via API?
@@ -273,8 +283,12 @@ const Builder = (() => {
         return state.currentStep = step;
     }
 
-    const getBuildStep = () => {
+    const getBuildStepNumber = () => {
         return state.currentStep;
+    }
+
+    const getBuildStep = () => {
+        return state.buildSteps[getBuildStepNumber()];
     }
 
     
@@ -282,56 +296,107 @@ const Builder = (() => {
     ////////////BUILD ACTIONS/////////////
     //////////////////////////////////////
     async function runStep(event, config) {  
-        const currentStep = getBuildStep();
-        const buildStep = state.buildSteps[currentStep];
+        console.log('runStep', config);
+        const currentStep = getBuildStepNumber();
+        console.log('currentStep', currentStep);
+        const buildStep = getBuildStep();
+        console.log('buildStep', buildStep);
         const action = config.options[0] === 'next' ? buildStep.nextAction : buildStep.action;
+        console.log('action', action);
         // const creativeSections = creativeState.devices.filter(item => action.device.includes(item.device));
-        logger.debug('state pre-send',creativeState)
+        console.log('state pre-send',creativeState)
         const stateToPass = pickProps(creativeState.devices, action.device);
-        logger.debug('runStep', action, stateToPass);
+        console.log('runStep', action, stateToPass);
         try {
             const results = await executeStepAction(action, stateToPass);
+            console.log('runStep results', results);
             if(results.every(result => result.success)) {
+                console.log('runStep success');
                 results.forEach((result) => {
                     action.callbacks?.forEach(callback => callback?.(action, result));
                 });
                 restoreFocus();
             } else {
-                //await core.showAlert(results.find(result => !result.success).message);
+                console.log(results.find(result => !result.success).message);
             }
         } catch (error) {
             console.error('Error executing step action:', error);
             // await core.showAlert(`Error ${builder.buildSteps[currentStep].name}: ${error}`);
         }
     }
-
+    
     async function executeStepAction(action, stateToPass) {
-        const {name, type, funcs, description, device} = action;
+        const { functions = [] } = action;
+      
+        // If there are no functions, return a single “success” result
+        if (functions.length === 0) {
+            return [{ success: true, message: "No functions to execute." }];
+        }
+      
+        // We start with a Promise that resolves to an empty array of results
+        const finalResults = await functions.reduce(
+            async (previousPromise, { doIt, options }) => {
+
+                // wait for the array of results so far
+                const resultsSoFar = await previousPromise;
+        
+                // now run the next function
+                const result = await doIt(action, stateToPass, options);
+                logger.log(`Build Action Result: ${result.message}`);
+                // (handle throws inside here if you want, pushing a failure object)
+        
+                // push it onto the array
+                resultsSoFar.push(result);
+
+                // return the updated array for the next iteration
+                return resultsSoFar;
+            },  
+            Promise.resolve([])  // initial “resultsSoFar” is []
+        );      
+
+        logger.log(`Build Action Results:`, finalResults);
+        return finalResults;   // this is an array of all { success, message } objects
+    }
+
+    /*  
+    async function executeStepAction(action, stateToPass) {
+        const {name, type, functions, description, device} = action;
         // logger.debug(`DEBUG: On ${type === 'substep' ? 'Substep' : 'Step'}: ${action.step+1}. User click initiated: ${name}, which will: ${description}`);
         try {
             // logger.debug(`DEBUG: Action:`, action, creativeSection);
-            let results =[];
-            funcs && (results = await Promise.all(funcs.map(async func => {
-                    const result = await func(action, stateToPass);
+            let results = [];
+            if (functions && functions.length > 0) {
+                // Execute each function sequentially using reduce to create a promise chain
+                // This ensures each function completes before starting the next one
+                return await functions.reduce(async (previousPromise, {doIt, options}) => {
+                    // Wait for the previous promise to complete
+                    await previousPromise;                
+                    // Then execute the current function
+                    const result = await doIt(action, stateToPass, options);
+                    logger.log(`Build Action Result: ${result.message}`);
                     if (!result.success && result.message) {
+                        // logger.error(`Build Action ResultError: ${result.message}`);
                         // await core.showAlert(result.message);
                     }
                     return result;
-                }
-            )));
-            return results;
+                }, Promise.resolve()); // Start with a resolved promise
+            } else {
+                return { success: true, message: "No functions to execute." };
+            }
         } catch (err) {
-            console.error(`Error calling ${name} action:`, err);
+            logger.error(`Error calling ${name} action:`, err);
             const errorMessage = err.message || err.toString() || "Unknown error.";
-            // await core.showAlert(`Error ${name}: ${errorMessage}`);
+            await core.showAlert(`Error ${name}: ${errorMessage}`);
+            return [{ success: false, message: errorMessage }];
         }    
     }
+        */
 
     function updateArtboardState(action, result) {
-        logger.debug(`${action.name} Completed. Updating Creative State With:`, result.payload);
+        logger.log(`${action.name} Completed. Updating Creative State With:`, result.payload);
         if (!result.payload || !creativeState.devices) return;        
         creativeState.devices = {...creativeState.devices, ...result.payload.devices}
-        logger.debug('creativeState', creativeState);
+        logger.log('creativeState', creativeState);
         //mergeArraysByKey(creativeState.devices, result.payload, 'device');
     }
 
@@ -342,14 +407,27 @@ const Builder = (() => {
     } 
 
     function incrementStep(action) {   
-        const currentStep = setBuildStep(Math.min(getBuildStep()+1, state.buildSteps.length-1));
-        const buildStep = state.buildSteps[currentStep];
+        const currentStep = setBuildStep(Math.min(getBuildStepNumber()+1, state.buildSteps.length-1));
+        const buildStep = getBuildStep();
         //console.log(`DEBUG: Incrementing To Main Step: ${currentStep+1}, named: ${buildStep.name}`); 
         updateBuildInterface(buildStep);
+        //saveSnapshot();
+    }
+
+    async function saveSnapshot() {
+        // await History.capture(`Step_${getBuildStepNumber()+1}`);
+        // const historyContainer = getEl('#plugin-history');
+        // const btnMarkup = document.createElement(`<sp-action-button id="historyBtn" label="History" value="Step_${getBuildStepNumber()+1}"></sp-action-button>`);
+        // historyContainer.appendChild(btnMarkup);
+        // const btn = getEl('#historyBtn');
+        // btn.addEventListener('click', async () => {
+        //     await History.restore(btn.value);
+        // });
+        
     }
 
     function updateBuildInterface(buildStep) {
-        const currentStep = getBuildStep();
+        const currentStep = getBuildStepNumber();
         // console.log(currentStep,  state.infoElements)
         state.infoElements.stepNumber.textContent = `Step ${currentStep+1}:`;
         state.infoElements.stepName.textContent = buildStep.name;
@@ -386,6 +464,8 @@ const Builder = (() => {
             }
             registerEventListener(eventObj);
         });  
+        const buildStep = getBuildStep();
+        updateBuildInterface(buildStep);
         return state
     }
     return { init };

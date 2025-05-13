@@ -1,4 +1,4 @@
-import { getEl, getEls, restoreFocus, proxyArraysEqual, capitalizeFirstLetter, parentGroupCount, setTagLabelCursor, buildScopeRegex } from "./js/helpers/utils.js";
+import { getEl, getEls, restoreFocus, proxyArraysEqual, capitalizeFirstLetter, parentGroupCount, setTagLabelCursor, buildScopeRegex, diffProxyArrays } from "./js/helpers/utils.js";
 import { selectLayersByName } from "./js/actions/selectLayersByName.js";
 import { linkLayersByName } from "./js/actions/linkLayersByName.js";
 import { unlinkLayersByName } from "./js/actions/unlinkLayersByName.js";
@@ -12,9 +12,9 @@ import { createLogger } from './js/helpers/logger.js';
 const { core, constants } = require("photoshop");
 const { LayerKind } = constants;
 let _onUpdateCallback = null;
-const logger = createLogger({ prefix: 'Editor', initialLevel: 'DEBUG' });
 
 const Editor = (() => {
+    const logger = createLogger({ prefix: 'Editor', initialLevel: 'INFO' });
 
     const stateHandler = {
         set: function(target, property, value) {
@@ -198,7 +198,7 @@ const Editor = (() => {
     }
 
     const setCurrentSelection = (selection) => {
-        const _sel = {};//{...state.currentSelection};
+        const _sel = {...state.currentSelection};
         ///if empty selection reset to default
         // logger.debug("(Editor) STARTING SET CURRENT", Date.now());
         
@@ -208,11 +208,12 @@ const Editor = (() => {
             _sel.layers = [];
             _sel.sameGroup = true;
             state.currentSelection = _sel;
+            // console.log('set select to empty, update state');
             return state.currentSelection;
         }
-        
         //check if the new selection is identical to the existing selection
         const isIdentical = proxyArraysEqual(selection, _sel.layers);
+       
 
         //if selection is already set to identical to current selection, return current selection without processing further.
         const alreadyIdentical = isIdentical && _sel.identical;
@@ -223,13 +224,16 @@ const Editor = (() => {
         _sel.identical = isIdentical; 
         if(_sel.identical) {
             state.currentSelection = _sel;
+            // console.log('set select to identical, update state');
             return state.currentSelection;
         } else {
             _sel.viable = getSelectionViability(selection);
             _sel.layers = selection;
             _sel.parentGroupCount = parentGroupCount(selection);
             state.currentSelection = _sel;
+            // console.log('selection changed, update state');
             // logger.debug("(Editor) DONE SET CURRENT SELECTION", Date.now());
+            logger.debug('selection changed', state.currentSelection);
             return state.currentSelection;
         }
         /**/
@@ -353,7 +357,7 @@ const Editor = (() => {
             feedbackMessage = `You've currently selected an artboard, or a mix of artboards and layers. Performing bulk actions on artboards is not supported`;
             state.actionBar.element.classList.add('mixed-selection');
         } else { 
-            feedbackMessage = `<span class='plugin-action-bar-pill'>${selection.layers.length} layers</span> selected ${selection.parentGroupCount.size === 1 ? ('<span class="plugin-action-bar-pill">in the same Artboard</span>') : (`across <span class='plugin-action-bar-pill'>${selection.parentGroupCount.size} Artboards</span>`)}`;
+            feedbackMessage = `<span class='plugin-action-bar-pill'>${selection.layers.length} Layer${selection.layers.length === 1 ? '' : 's'}</span> selected ${selection.parentGroupCount.size === 1 ? ('In The <span class="plugin-action-bar-pill">Same Artboard</span>') : (`Across <span class='plugin-action-bar-pill'>${selection.parentGroupCount.size} Artboards</span>`)}`;
             state.actionBar.element.classList.remove('mixed-selection');
         }
         state.actionBar.feedbackElement.innerHTML = feedbackMessage;

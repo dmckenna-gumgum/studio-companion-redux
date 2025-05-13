@@ -1,7 +1,10 @@
-const { app, core, action, constants } = require('photoshop');
-const { LayerKind, ElementPlacement } = constants;
+import { createLogger } from './logger.js';
+
+const { app, core, action, constants: Constants } = require('photoshop');
+const { LayerKind, ElementPlacement } = Constants;
 const { batchPlay } = action;
 const fs = require('uxp').storage.localFileSystem; // Import filesystem
+const logger = createLogger({ prefix: 'Builder', initialLevel: 'DEBUG' });
 
 const debug = false;
 
@@ -16,12 +19,12 @@ function log(message) {
  */
 function getLayerContainer(selection) {
     const parentContainer = selection[0]?.parent;
-    log(`(getLayerContainer) First layer parent: ${parentContainer.name}`);
+    logger.debug(`(getLayerContainer) First layer parent: ${parentContainer.name}`);
     if (parentContainer === null) {
         return { success: false, message: "Selected layers are not inside a container.", count: 0 };
     } else {
         const allSameParent = selection.length <= 1 ? true : selection.every(item => item.parent.id === parentContainer.id);   
-        log(`(getLayerContainer) All same parent: ${allSameParent}`); 
+        logger.debug(`(getLayerContainer) All same parent: ${allSameParent}`); 
         if (!allSameParent) {
             return { success: false, message: "Selection spans multiple containers.", count: 0 };
         } 
@@ -75,10 +78,10 @@ function findValidGroups(potentialGroups, sourceContainer, nameFilters = []) {
 async function toggleHistory(hostControl, state, documentID, actionName) {
     if (state === "suspend") {
         await hostControl.suspendHistory({ "documentID": documentID, "name": actionName });
-        log("(Modal Action) History suspended.");
+        logger.log("(Modal Action) History suspended.");
     } else if (state === "resume") {
         await hostControl.resumeHistory({ "documentID": documentID });
-        log("(Modal Action) History resumed.");
+        logger.log("(Modal Action) History resumed.");
     }
 }
 
@@ -88,7 +91,7 @@ async function toggleHistory(hostControl, state, documentID, actionName) {
  */
 function checkForExistingLayers(targetContainer, sourceLayerNames, skippedTargets) {
     const targetLayerNames = targetContainer.layers ? targetContainer.layers.map(l => l.name) : []; // Handle case where target might somehow have no layers array
-    log(`(Modal Action) Target "${targetContainer.name}" existing layers: [${targetLayerNames.join(', ')}]`);
+    logger.debug(`(Modal Action) Target "${targetContainer.name}" existing layers: [${targetLayerNames.join(', ')}]`);
     const hasExistingLayer = !sourceLayerNames.some(sourceName => targetLayerNames.includes(sourceName));
     !hasExistingLayer && skippedTargets++;
     return [hasExistingLayer, skippedTargets];
@@ -124,7 +127,7 @@ function getRelativePosition(sourceLayer, sourceContainer) {
     const sourceContainerBounds = sourceContainer.bounds; // sourceContainer is defined earlier
     const relativeX = sourceLayerBounds.left - sourceContainerBounds.left;
     const relativeY = sourceLayerBounds.top - sourceContainerBounds.top;
-    log(`(Modal Action) Source '${sourceLayer.name}' relative pos: (${relativeX}, ${relativeY})`);
+    logger.debug(`(Modal Action) Source '${sourceLayer.name}' relative pos: (${relativeX}, ${relativeY})`);
     return { relativeX, relativeY };
 }
 
@@ -142,10 +145,10 @@ async function matchRelativePosition(duplicatedLayer, relativePositions, targetC
     const deltaY = desiredAbsoluteY - duplicatedLayerBounds.top;
     
     if (Math.abs(deltaX) > 0.1 || Math.abs(deltaY) > 0.1) { // Only translate if needed (avoid tiny adjustments)
-        log(`(Modal Action) Translating duplicated layer by (${deltaX}, ${deltaY})`);
+        logger.debug(`(Modal Action) Translating duplicated layer by (${deltaX}, ${deltaY})`);
         await duplicatedLayer.translate(deltaX, deltaY);
     } else {
-        log(`(Modal Action) Duplicated layer already at correct relative position.`);
+        logger.debug(`(Modal Action) Duplicated layer already at correct relative position.`);
     }
     return duplicatedLayer;
 }
@@ -202,7 +205,7 @@ async function showInputDialog(label, title, defaultValue = '', okText = 'OK', c
             const pluginFolder = await fs.getPluginFolder();
             const htmlFile = await pluginFolder.getEntry('html/inputDialog.html'); 
             if (!htmlFile) {
-                log("Dialog HTML file not found: html/inputDialog.html");
+                logger.debug("Dialog HTML file not found: html/inputDialog.html");
                 resolve({ dismissed: true, value: null });
                 return;
             }
@@ -400,6 +403,63 @@ async function convertAllLayersToSmartObjects(artboard, rasterizeText, rasterize
     return results;
 }
 
+async function getArtboardFrame(artboardLayer) {
+    const [{ artboard: { artboardRect } }] = await batchPlay(
+      [{
+        _obj: "get",
+        _target: [
+          { _ref: "property", _property: "artboard" },
+          { _ref: "layer",    _id: artboardLayer.id    }
+        ]
+      }],
+      { synchronousExecution: true }
+    );
+    return artboardRect;  // { left, top, right, bottom }
+}
+
+async function getGuidesForFrame(frame) {
+    return app.activeDocument.guides.filter(guide => {
+      // ensure numeric
+      const pos = Math.round(parseFloat(guide.coordinate));
+      if (guide.direction === Constants.Direction.VERTICAL) {
+        return pos >= frame.left && pos <= frame.right;
+      }
+      // HORIZONTAL
+      return pos >= frame.top  && pos <= frame.bottom;
+    });
+}
+
+async function moveBoardAndGuide(artboard, x, y, specificGuides = null) {
+    try {
+        console.log("(moveBoardAndGuide) Using External Guide Target:", specificGuides);
+        const frame = await getArtboardFrame(artboard);
+        const guides = specificGuides === null ? await getGuidesForFrame(frame) : specificGuides; 
+        console.log("(moveBoardAndGuide) Guides: ", guides);
+        await artboard.translate(x, y);
+        console.log("(moveBoardAndGuide) Moving board and guides:", artboard.name, x, y, 'using guides:', guides);
+        for (const g of guides) {
+            // parse + round to avoid fractional drift
+            const current = parseFloat(g.coordinate);
+            g.coordinate = parseFloat(current) + (g.direction === Constants.Direction.VERTICAL ? specificGuides === null ? x : 0 : y);
+            g.coordinate = parseFloat(g.coordinate);
+        }
+        return artboard;
+    } catch (error) {
+        console.error("(moveBoardAndGuide) Error moving board and guides:", error);
+        return artboard;
+    }
+}
+
+async function cloneGuidesForFrame(frame) {
+    const guides = await getGuidesForFrame(frame); 
+    const clonedGuides = guides.map(guide => {
+        const newGuide = guide.duplicate();
+        newGuide.coordinate = parseFloat(guide.coordinate);
+        return newGuide;
+    });
+    return clonedGuides;
+}
+
 export {
     getLayerContainer,
     findValidGroups,
@@ -415,5 +475,8 @@ export {
     rasterizeLayer,
     duplicateBoardToBoard,
     convertAllLayersToSmartObjects,
-    log
+    getArtboardFrame,
+    getGuidesForFrame,
+    moveBoardAndGuide,
+    cloneGuidesForFrame
 };

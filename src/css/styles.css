@@ -36,8 +36,8 @@ sp-field-label {
 sp-sidenav {
   --spectrum-sidenav-content-color-default:var(--uxp-host-text-color);
   --spectrum-sidenav-content-color-hover:var(--uxp-host-link-hover-text-color);
-  --spectrum-sidenav-content-color-default-selected: var(--uxp-host-text-color);
-  --spectrum-sidenav-content-color-hover-selected: var( --uxp-host-link-hover-text-color );
+  --spectrum-sidenav-content-color-default-selected: white;/*var(--uxp-host-text-color);*/
+  --spectrum-sidenav-content-color-hover-selected:white;/* var( --uxp-host-link-hover-text-color );*/
   --spectrum-sidenav-background-hover: var(--uxp-host-widget-hover-background-color);
   --spectrum-sidenav-item-background-down: var(--uxp-host-border-color);
   --spectrum-sidenav-item-background-default-selected: var(--spectrum-informative-background-color-default);
@@ -67,12 +67,18 @@ sp-dialog {
 }
 
 sp-switch {
-margin: 0.25rem 0;
+  margin: 0.25rem 0;
 }
 
 sp-button-group {
   display: flex;
   justify-content: stretch;
+}
+
+sp-button[size="xl"][icon-only] {
+  --spectrum-button-min-width: 1rem;
+  --spectrum-button-edge-to-visual: 0.75rem;
+  --spectrum-button-edge-to-text: 0.75rem;
 }
 
 .plugin-container {
@@ -88,6 +94,10 @@ sp-button-group {
   left: 0;
   width: 100%;
   padding: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  align-content: center;
 
 }
 
@@ -126,12 +136,47 @@ sp-action-bar.selection-same-groups sp-action-button {
   --spectrum-actionbutton-background-color-down: var(--spectrum-celery-400);
 }
 
+.plugin-action-bar-pill {
+  border-radius: 0.75rem;
+  padding: 0.25rem 0.8rem;
+  border: 1.5px solid var(--uxp-host-text-color);
+  margin: 0 0.6rem;
+  font-size: 0.8rem;
+  background-color: var(--uxp-host-border-color);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-sizing: border-box;
+  font-weight: bold;
+}
+
+sp-action-bar.selection-many-groups .plugin-action-bar-pill {
+  background-color: var(--spectrum-accent-color-300);
+}
+sp-action-bar.selection-same-groups .plugin-action-bar-pill {
+  background-color: var(--spectrum-celery-300);
+}
+
+
+.plugin-action-bar-feedback {
+  display: flex;
+  align-items: center;
+  font-size: 0.8rem;
+  height: 100%;
+  position: relative;
+  top: -0.25rem;
+  /* color: white; */
+}
+sp-action-bar.mixed-selection .plugin-action-bar-feedback {
+  top: 0;
+}
 
 .plugin-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.75rem 1rem;
+    padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--uxp-host-border-color);
     flex: 0 1 auto;
 }
@@ -139,6 +184,7 @@ sp-action-bar.selection-same-groups sp-action-button {
 .plugin-title {
   padding: 0;
   margin: 0;
+  font-weight: 400;
 }
 
 .plugin-main {
@@ -369,6 +415,7 @@ sp-action-bar.selection-same-groups sp-action-button {
   display: inline-block;
   max-width: 900px;
   text-align: center;
+  margin: 0 1rem;
 }
 .plugin-step-button {
   flex: 0 1 auto;
@@ -382,6 +429,10 @@ sp-action-bar.selection-same-groups sp-action-button {
 
 .-show {
   display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  align-content: center;
   pointer-events: auto;
 }
 

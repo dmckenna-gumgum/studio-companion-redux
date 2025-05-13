@@ -43,7 +43,7 @@ import Builder from './builder.js';
 // Configurations and Constants
 import { creativeConfigs } from "./js/constants/creativeConfigs.js";
 import { getPSTheme } from "./js/helpers/themeSetter.js";
-import { getEl, loadManifest, logInitData } from "./js/helpers/utils.js";
+import { getEl, loadManifest, logInitData, capitalizeFirstLetter } from "./js/helpers/utils.js";
 import { createLogger } from './js/helpers/logger.js';
 
 const { versions, host, storage } = require('uxp');
@@ -51,9 +51,10 @@ const { app, action } = require('photoshop');
 const { arch, platform } = require('os');
 
 
-const logger = createLogger({ prefix: 'Plugin', initialLevel: 'DEBUG' });
 
 const Plugin = (() => {
+    
+    const logger = createLogger({ prefix: 'Plugin', initialLevel: 'DEBUG' });
     // UXP modules
     ///Eventually i'll use this component  to open files, and send the user to the studio when finished. 
     //Add file load detection, which checks the activeDocument for a number of indicators
@@ -61,23 +62,31 @@ const Plugin = (() => {
     //config schema from creativeConfigs
     const state = {
         currentMode: 'build',
-        mode: 'velocity',
+        format: 'velocity',
+        currentDocument: app.activeDocument.name,
         sections: {
             nav: {
                 element: getEl('sp-sidenav'),
                 activeAttribute: 'data-active-menu',
                 targetElement: getEl('.plugin-content')
             },
+            header: {
+                element: getEl('#plugin-title'),
+                titleText: 'Loading...',
+                help: []
+            },
             production: {
             }
         },
     }
-    state.creative = {...creativeConfigs.find(config => config.name === state.mode)};
+    state.creative = {...creativeConfigs.find(config => config.name === state.format)};
     
     const handleStateChange = (newState) => {
     //const handleStateChange = (params = {panel: null, newState: null}) => {
         if(!newState) return;
         newState.type === 'creative' ? state[newState.type] = newState : state.sections[newState.type] = newState;
+        // console.log('handleStateChange', state);
+        setHeaderText(generateTitleText());
     }
 
     const {nav} = state.sections; 
@@ -87,8 +96,10 @@ const Plugin = (() => {
         //to store in it. 
         state.currentMode = event.target.value;
         nav.targetElement.setAttribute(nav.activeAttribute, state.currentMode);
+        setHeaderText(generateTitleText());
     }
     
+
     async function applyTheme() {
         const themeValue = await getPSTheme();
         document.getElementById('theme').setAttribute("color", themeValue);
@@ -108,12 +119,43 @@ const Plugin = (() => {
                 return;
             }
         }        
+        setHeaderText(generateTitleText());
         logger.debug(`Active document changed: ${app.activeDocument.name}`);
     }
     
     function watchActiveDocumentChange() {
         const events = ["select", "open", "close"];
         action.addNotificationListener(events.map(ev => ({ event: ev })), documentChangeHandler);
+    }
+
+    function generateTitleText() {
+        let sectionTitle = '';
+        switch(state.currentMode) {
+            case 'build':
+                sectionTitle = getBuildStepTitle();
+                break;
+            case 'editor':
+                sectionTitle = `<span style="font-weight: bold">Editing:</span> ${app.activeDocument.name}`;
+                break;
+            case 'production':
+                sectionTitle = `<span style="font-weight: bold">Finalizing:</span> ${app.activeDocument.name}`;
+                break;
+            default:
+                sectionTitle = 'Studio Companion: ';
+        }
+        //logger.debug(sectionTitle);
+        return `${sectionTitle}`;
+    }
+
+    function getBuildStepTitle() {
+        const stepNumber = state.sections.builder.currentStep;
+        return `<span style="font-weight: bold">${capitalizeFirstLetter(state.format)}</span>: Step ${stepNumber + 1}`;//of ${state.sections.builder.buildSteps.length}`;
+    }   
+
+    function setHeaderText(text) {
+        state.sections.header.titleText = text;
+        state.sections.header.element.innerHTML = text;
+        return state.sections.header.element;
     }
 
     
@@ -145,7 +187,7 @@ const Plugin = (() => {
         } catch (error) {
             logger.error('Error watching active document change', error);
         }
-
+        setHeaderText(generateTitleText());
         console.log("Plugin initialized", state);
     }
 

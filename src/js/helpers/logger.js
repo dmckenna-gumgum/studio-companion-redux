@@ -61,7 +61,7 @@ const LOG_LEVELS = {
 
 // Default global level: show all logs during development.
 // You can change this in your main plugin entry point.
-let globalLogLevel = LOG_LEVELS.DEBUG;
+let globalLogLevel = LOG_LEVELS.INFO;
 
 /**
  * Sets the global minimum log level for all created loggers.

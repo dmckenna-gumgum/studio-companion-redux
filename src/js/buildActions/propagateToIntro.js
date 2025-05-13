@@ -118,7 +118,16 @@ async function renamePreviousBoards(route) {
     return boards;
 }
 
-async function propagateToIntro(action, creativeState) { 
+function pluck(obj, keys) {
+    return keys.reduce((values, key) => {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        values.push(obj[key]);
+      }
+      return values;
+    }, []);
+}
+
+async function propagateToIntro(action, creativeState, options) { 
     try {      
         const result = await core.executeAsModal(async (executionContext) => {
             const hostControl = executionContext.hostControl;
@@ -127,10 +136,10 @@ async function propagateToIntro(action, creativeState) {
             // logger.debug("State:", creativeState);
             // logger.debug("Action:", action);
             const newState = {...creativeState}            
-            const deviceTypes = Object.values(newState);
+            const deviceTypes = pluck(newState, options.device);//Object.values(newState);
             // logger.debug("Device Types:", deviceTypes);
             // logger.debug("Action Sequences:", action.sequences);
-            const sequencesToEdit = deviceTypes.map((device) => device.sequences).map(seq => pickProps(seq, action.sequences));            
+            const sequencesToEdit = deviceTypes.map((device) => device.sequences).map(seq => pickProps(seq, options.sequences));            
             logger.debug("Sequences to Edit:", sequencesToEdit);
             
             const actionRoutes = [];

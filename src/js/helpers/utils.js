@@ -49,18 +49,75 @@ function getEls(selector) {
     return document.querySelectorAll(selector);
 }  
 
-function proxyArraysEqual(a, b) {
-    // 1) If they’re literally the same object, they’re equal
-    if (a === b) return true;
-  
-    // 2) Both must be array-like and same length
-    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
-        return false;
+function diffProxyArrays(oldArr, newArr) {
+    if (!Array.isArray(oldArr) || !Array.isArray(newArr)) {
+      throw new TypeError('Both arguments must be arrays (or proxies of arrays).');
     }
   
-    // 3) Compare each entry to check doc and layer ids match
-    return a.every((elementA, i) => elementA._docId === b[i]._docId && elementA._id === b[i]._id);
+    const lenOld = oldArr.length;
+    const lenNew = newArr.length;
+    const minLen = Math.min(lenOld, lenNew);
+  
+    const added   = [];
+    const removed = [];
+    const changed = [];
+  
+    // 1. Check changed values at overlapping indices
+    for (let i = 0; i < minLen; i++) {
+      if (!Object.is(oldArr[i], newArr[i])) {
+        changed.push({ index: i, from: oldArr[i], to: newArr[i] });
+      }
+    }
+  
+    // 2. Any extra in newArr are “added”
+    for (let i = minLen; i < lenNew; i++) {
+      added.push({ index: i, value: newArr[i] });
+    }
+  
+    // 3. Any extra in oldArr are “removed”
+    for (let i = minLen; i < lenOld; i++) {
+      removed.push({ index: i, value: oldArr[i] });
+    }
+  
+    return { added, removed, changed };
 }
+
+function proxyArraysEqual(a, b) {
+    // same reference → equal
+    if (a === b) return true;
+    // must both be arrays of the same length
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
+      return false;
+    }
+    // loop once, compare both keys
+    for (let i = 0, len = a.length; i < len; i++) {
+      const o1 = a[i], o2 = b[i];
+      // if either missing or ids don’t match → not equal
+      if (
+        !o1 || !o2 ||
+        o1._docId !== o2._docId ||
+        o1._id    !== o2._id
+      ) {
+        return false;
+      }
+    }
+    return true;
+}
+// function proxyArraysEqual(a, b) {
+//     // 1) If they’re literally the same object, they’re equal
+//     console.log('literal check', a === b);    
+//     if (a === b) return true;
+  
+//     // 2) Both must be array-like and same length
+//     console.log('array like', !Array.isArray(a) || !Array.isArray(b) || a.length !== b.length);    
+//     if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
+//         return false;
+//     }
+  
+//     // 3) Compare each entry to check doc and layer ids match
+//     console.log('same entries', a.every((elementA, i) => elementA._docId === b[i]._docId && elementA._id === b[i]._id));    
+//     return a.every((elementA, i) => elementA._docId === b[i]._docId && elementA._id === b[i]._id);
+// }
 
 function capitalizeFirstLetter(string) {
     return string.charAt(0).toUpperCase() + string.slice(1);
@@ -278,6 +335,15 @@ function pickProps(obj, keysToKeep, defaultSchema = {}) {
     return result;
   }
 
+function cartesianProduct(...arrays) {
+    return arrays
+        .reduce(
+            (acc, curr) =>
+                acc.flatMap(a => curr.map(b => [...a, b])),
+            [[]]
+    );
+}
+
 export {
     getEl,
     getEls,
@@ -293,5 +359,7 @@ export {
     replaceStep,
     mergeArraysByKey,
     findInArray,
-    pickProps
+    pickProps,
+    cartesianProduct,
+    diffProxyArrays
 };
