@@ -1,6 +1,6 @@
 const { app, core, executionContext } = require("photoshop");
 
-async function unlinkLayersByName() {
+const unlinkLayersByName = async () => {
     console.log("(Action Script) unlinkLayersByNameAction started.");
     let executionResult = { success: false, message: "", count: 0 };
 
@@ -30,7 +30,7 @@ async function unlinkLayersByName() {
 
             // Recursive function to find all matching layers
             function findMatchingLayers(layerSet) {
-                for (let i = layerSet.length - 1; i >= 0; i--) { 
+                for (let i = layerSet.length - 1; i >= 0; i--) {
                     const layer = layerSet[i];
                     if (targetNames.has(layer.name)) {
                         matchingLayers.push(layer);
@@ -54,28 +54,28 @@ async function unlinkLayersByName() {
             let unlinkedCount = 0;
             if (matchingLayers.length === 0) {
                 console.log("(Modal Action) No matching layers found to unlink.");
-                 await core.showAlert("Found no layers matching the selected names. Nothing to unlink.");
+                await core.showAlert("Found no layers matching the selected names. Nothing to unlink.");
                 // Don't treat as failure, just nothing done
-                 executionResult = { success: true, message: "No matching layers found to unlink.", count: 0 };
+                executionResult = { success: true, message: "No matching layers found to unlink.", count: 0 };
             } else {
                 console.log(`(Modal Action) Unlinking ${matchingLayers.length} layers.`);
                 for (const layer of matchingLayers) {
                     try {
                         if (layer.linkedLayers && layer.linkedLayers.length > 0) { // Check if actually linked
-                           layer.unlink();
-                           unlinkedCount++; 
+                            layer.unlink();
+                            unlinkedCount++;
                         } else {
-                             console.log(`(Modal Action) Layer '${layer.name}' was not linked.`);
+                            console.log(`(Modal Action) Layer '${layer.name}' was not linked.`);
                         }
                     } catch (unlinkError) {
                         console.warn(`(Modal Action) Could not unlink layer '${layer.name}': ${unlinkError.message}`);
                     }
                 }
-                 executionResult = { success: true, message: `Unlinked ${unlinkedCount} layer(s) matching names.`, count: unlinkedCount };
+                executionResult = { success: true, message: `Unlinked ${unlinkedCount} layer(s) matching names.`, count: unlinkedCount };
             }
 
             // Resume history state
-            await hostControl.resumeHistory({"documentID": activeDoc.id});
+            await hostControl.resumeHistory({ "documentID": activeDoc.id });
             console.log("(Modal Action) History resumed.");
             return executionResult;
 
@@ -87,9 +87,9 @@ async function unlinkLayersByName() {
     } catch (err) {
         console.error("(Action Script) Error in unlinkLayersByNameAction:", err);
         const message = err.message || err.toString() || "Unknown error unlinking layers.";
-         if (!message.includes("No active document") && !message.includes("No layers are currently selected")) {
-             await core.showAlert(`Error unlinking layers: ${message}`);
-         }
+        if (!message.includes("No active document") && !message.includes("No layers are currently selected")) {
+            await core.showAlert(`Error unlinking layers: ${message}`);
+        }
         return { success: false, message: `Error: ${message}`, count: 0 };
     }
 }

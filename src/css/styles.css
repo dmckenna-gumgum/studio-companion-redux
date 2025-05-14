@@ -5,7 +5,9 @@
   --spectrum-fieldlabel-color: var(--uxp-host-text-color); */
 }
 
-body, html, sp-theme {
+body,
+html,
+sp-theme {
   margin: 0;
   padding: 0;
   height: 100%;
@@ -16,6 +18,7 @@ body, html, sp-theme {
   font-size: var(--uxp-host-font-size);
 
 }
+
 /*
 sp-button {  
   --spectrum-button-background-color-default: var( --uxp-host-background-color );
@@ -34,10 +37,12 @@ sp-field-label {
 }
 */
 sp-sidenav {
-  --spectrum-sidenav-content-color-default:var(--uxp-host-text-color);
-  --spectrum-sidenav-content-color-hover:var(--uxp-host-link-hover-text-color);
-  --spectrum-sidenav-content-color-default-selected: white;/*var(--uxp-host-text-color);*/
-  --spectrum-sidenav-content-color-hover-selected:white;/* var( --uxp-host-link-hover-text-color );*/
+  --spectrum-sidenav-content-color-default: var(--uxp-host-text-color);
+  --spectrum-sidenav-content-color-hover: var(--uxp-host-link-hover-text-color);
+  --spectrum-sidenav-content-color-default-selected: white;
+  /*var(--uxp-host-text-color);*/
+  --spectrum-sidenav-content-color-hover-selected: white;
+  /* var( --uxp-host-link-hover-text-color );*/
   --spectrum-sidenav-background-hover: var(--uxp-host-widget-hover-background-color);
   --spectrum-sidenav-item-background-down: var(--uxp-host-border-color);
   --spectrum-sidenav-item-background-default-selected: var(--spectrum-informative-background-color-default);
@@ -82,10 +87,10 @@ sp-button[size="xl"][icon-only] {
 }
 
 .plugin-container {
-    display: flex;
-    flex-direction: column;
-    justify-content: stretch;
-    height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: stretch;
+  height: 100%;
 }
 
 .plugin-action-bar {
@@ -101,7 +106,7 @@ sp-button[size="xl"][icon-only] {
 
 }
 
-.sp-action-bar {  
+.sp-action-bar {
   --spectrum-actionbar-shadow-horizontal: var(--spectrum-drop-shadow-x);
   --spectrum-actionbar-shadow-vertical: var(--spectrum-drop-shadow-y);
   --spectrum-actionbar-shadow-blur: var(--spectrum-drop-shadow-blur);
@@ -124,16 +129,30 @@ sp-action-bar.mixed-selection {
 }
 
 sp-action-bar.mixed-selection sp-action-button[disabled] {
-  color: rgba(255,255,255,0.5);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 sp-action-bar.selection-many-groups sp-action-button {
   --spectrum-actionbutton-background-color-hover: var(--spectrum-accent-color-700);
   --spectrum-actionbutton-background-color-down: var(--spectrum-accent-color-400);
 }
+
 sp-action-bar.selection-same-groups sp-action-button {
   --spectrum-actionbutton-background-color-hover: var(--spectrum-celery-700);
   --spectrum-actionbutton-background-color-down: var(--spectrum-celery-400);
+}
+
+.plugin-control-cluster sp-action-button {
+  --spectrum-actionbutton-background-color-default: var(--uxp-host-background-color);
+  --spectrum-actionbutton-background-color-hover: var(--uxp-host-background-color);
+  --spectrum-actionbutton-background-color-down: var(--uxp-host-background-color);
+  --spectrum-actionbutton-background-color-active: var(--uxp-host-background-color);
+  margin: 0.25rem 0.5rem 0.25rem 0;
+  position: relative;
+}
+
+.plugin-control-cluster sp-action-button#btnAutoLink {
+  --spectrum-actionbutton-border-color-default: var(--uxp-host-border-color);
 }
 
 .plugin-action-bar-pill {
@@ -154,6 +173,7 @@ sp-action-bar.selection-same-groups sp-action-button {
 sp-action-bar.selection-many-groups .plugin-action-bar-pill {
   background-color: var(--spectrum-accent-color-300);
 }
+
 sp-action-bar.selection-same-groups .plugin-action-bar-pill {
   background-color: var(--spectrum-celery-300);
 }
@@ -168,17 +188,18 @@ sp-action-bar.selection-same-groups .plugin-action-bar-pill {
   top: -0.25rem;
   /* color: white; */
 }
+
 sp-action-bar.mixed-selection .plugin-action-bar-feedback {
   top: 0;
 }
 
 .plugin-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--uxp-host-border-color);
-    flex: 0 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid var(--uxp-host-border-color);
+  flex: 0 1 auto;
 }
 
 .plugin-title {
@@ -188,10 +209,10 @@ sp-action-bar.mixed-selection .plugin-action-bar-feedback {
 }
 
 .plugin-main {
-    display: flex;
-    flex-direction: row;
-    align-items: stretch;
-    flex: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  flex: 1;
 }
 
 .plugin-nav {
@@ -199,13 +220,13 @@ sp-action-bar.mixed-selection .plugin-action-bar-feedback {
 }
 
 .plugin-nav {
-    width: 200px;
-    height: 100%;
-    border-right: 1px solid var(--uxp-host-border-color);
+  width: 200px;
+  height: 100%;
+  border-right: 1px solid var(--uxp-host-border-color);
 }
 
 .plugin-sidenav {
-    width: auto;
+  width: auto;
 }
 
 .plugin-menu {
@@ -213,17 +234,17 @@ sp-action-bar.mixed-selection .plugin-action-bar-feedback {
   flex-direction: row;
   justify-content: stretch;
   align-items: flex-start;
-  flex: 1;  
+  flex: 1;
 }
 
 .plugin-menu-section {
-    padding: 1rem 2rem;
-    border-right: 1px solid var(--uxp-host-border-color);
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    flex: 1 1 auto;
+  padding: 1rem 2rem;
+  border-right: 1px solid var(--uxp-host-border-color);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  flex: 1 1 auto;
 }
 
 .plugin-menu-section:first-child {
@@ -231,8 +252,8 @@ sp-action-bar.mixed-selection .plugin-action-bar-feedback {
 }
 
 .plugin-menu-section:last-child {
-    padding-right: 2rem;
-    border-right: none;
+  padding-right: 2rem;
+  border-right: none;
 }
 
 .plugin-content[data-active-menu="build"] #build-menu,
@@ -247,10 +268,28 @@ sp-action-bar.mixed-selection .plugin-action-bar-feedback {
   flex-direction: column;
   padding: 0 0.5rem;
   margin-bottom: 1rem;
+  position: relative;
 }
 
 .plugin-control-cluster--row {
   flex-direction: row;
+}
+
+.--disabled:before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(50, 50, 50, 0.75);
+  z-index: 9;
+}
+
+.plugin-control-cluster sp-button-group {
+  padding: 0.25rem;
+
+  position: relative;
 }
 
 .plugin-label {
@@ -273,12 +312,12 @@ sp-action-bar.mixed-selection .plugin-action-bar-feedback {
   --spectrum-tag-background-color-hover: var(--uxp-host-border-color);
 
   --spectrum-tag-border-color: var(--uxp-host-border-color);
-  
+
   --spectrum-tag-content-color: var(--uxp-host-text-color);
 
 }
 
-.plugin-tag--device {  
+.plugin-tag--device {
   --spectrum-tag-background-color-active: var(--spectrum-magenta-300);
 
   --spectrum-tag-border-color-hover: var(--spectrum-global-color-magenta-300);
@@ -303,12 +342,12 @@ sp-action-bar.mixed-selection .plugin-action-bar-feedback {
 
 .plugin-tag--state {
   --spectrum-tag-background-color-active: var(--uxp-host-background-color);
-  
+
   --spectrum-tag-border-color-hover: var(--spectrum-global-color-fuchsia-300);
   --spectrum-tag-border-color-active: var(--spectrum-global-color-fuchsia-700);
 
   --spectrum-tag-content-color-hover: var(--spectrum-global-color-fuchsia-300);
-  --spectrum-tag-content-color-active: var(--spectrum-global-color-fuchsia-700 );
+  --spectrum-tag-content-color-active: var(--spectrum-global-color-fuchsia-700);
 }
 
 .plugin-tag--active.plugin-tag--state {
@@ -335,15 +374,15 @@ sp-action-bar.mixed-selection .plugin-action-bar-feedback {
   color: var(--spectrum-red-600);
 }
 
-.plugin-option-note{
+.plugin-option-note {
   font-size: var(--uxp-host-font-size-smaller);
   flex: 0 1 auto;
 }
 
 .plugin-flex {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
 }
 
 .plugin-flex--flex-row {
@@ -359,21 +398,21 @@ sp-action-bar.mixed-selection .plugin-action-bar-feedback {
 }
 
 .plugin-menu--build {
-    flex-direction: column;
-    justify-content: stretch;
-    align-items: stretch;
-    align-content: stretch;
-    padding: 1rem;
+  flex-direction: column;
+  justify-content: stretch;
+  align-items: stretch;
+  align-content: stretch;
+  padding: 1rem;
 }
 
 .plugin-step-section {
-    flex: 0 1 auto;
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    align-items: center;
-    align-content: center;
-    padding: 1rem 4rem;
+  flex: 0 1 auto;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  align-content: center;
+  padding: 1rem 4rem;
 }
 
 .plugin-step-section--fixed {
@@ -387,10 +426,10 @@ sp-action-bar.mixed-selection .plugin-action-bar-feedback {
 
 .plugin-progress-bar {
   height: 0.5rem;
-  background-color: var( --uxp-host-border-color );
-  
+  background-color: var(--uxp-host-border-color);
+
   color: var(--plugin-text);
-  border-radius: 0.25rem; 
+  border-radius: 0.25rem;
   overflow: hidden;
 }
 
@@ -408,7 +447,7 @@ sp-action-bar.mixed-selection .plugin-action-bar-feedback {
 }
 
 .plugin-step-number {
-    font-weight: 700;
+  font-weight: 700;
 }
 
 .plugin-step-text {
@@ -417,6 +456,7 @@ sp-action-bar.mixed-selection .plugin-action-bar-feedback {
   text-align: center;
   margin: 0 1rem;
 }
+
 .plugin-step-button {
   flex: 0 1 auto;
 }
@@ -443,6 +483,7 @@ sp-action-bar.mixed-selection .plugin-action-bar-feedback {
 .plugin-step-button:first-child {
   margin-right: 2rem;
 }
+
 .plugin-step-button:last-child {
   margin-left: 2rem;
 }
@@ -455,22 +496,21 @@ sp-action-bar.mixed-selection .plugin-action-bar-feedback {
 }
 
 .plugin-dialog-menu {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-content: stretch;
-    align-items: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-content: stretch;
+  align-items: stretch;
 }
 
-.plugin-dialog-label {
-}
+.plugin-dialog-label {}
 
 .plugin-dialog-input-container {
   margin-bottom: 2rem;
 }
 
 .plugin-dialog-input {
-    width: 100%;
+  width: 100%;
 }
 
 .plugin-dialog-button-container {
@@ -483,19 +523,19 @@ sp-action-bar.mixed-selection .plugin-action-bar-feedback {
 }
 
 .plugin-dialog-button-primary {
-  flex: 1  1 auto;
+  flex: 1 1 auto;
 }
 
 .plugin-history {
-    display: none;
-    flex-direction: row;
-    justify-content: flex-end;
-    align-content: center;
-    align-items: center;
+  display: none;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-content: center;
+  align-items: center;
 }
 
 .plugin-history.-show {
-    display: flex;
+  display: flex;
 }
 
 .plugin-history sp-button-group {
@@ -503,11 +543,11 @@ sp-action-bar.mixed-selection .plugin-action-bar-feedback {
 }
 
 .plugin-history-btn {
-    margin: 0 0.25rem;
-    --spectrum-button-min-width: 0.75rem;
-    --spectrum-button-edge-to-visual: 1.25rem;
-    --spectrum-button-edge-to-text: 1.25rem;
-    --spectrum-button-height: 1.125rem;
-    --spectrum-button-font-size: 0.625rem;
-    --spectrum-button-bottom-to-text: 0.4rem;
+  margin: 0 0.25rem;
+  --spectrum-button-min-width: 0.75rem;
+  --spectrum-button-edge-to-visual: 1.25rem;
+  --spectrum-button-edge-to-text: 1.25rem;
+  --spectrum-button-height: 1.125rem;
+  --spectrum-button-font-size: 0.625rem;
+  --spectrum-button-bottom-to-text: 0.4rem;
 }

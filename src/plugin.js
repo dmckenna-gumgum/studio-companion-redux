@@ -36,9 +36,11 @@ import '@swc-uxp-wrappers/textfield/sp-textfield.js';
 import '@swc-uxp-wrappers/dialog/sp-dialog.js';
 import '@swc-uxp-wrappers/divider/sp-divider.js';
 import '@swc-uxp-wrappers/tags/sp-tag.js';
+import '@spectrum-web-components/icons-workflow/icons/sp-icon-refresh.js';
 
 import Editor from './editor.js';
 import Builder from './builder.js';
+import { clearAllSnapshots } from './js/helpers/history.js';
 
 // Configurations and Constants
 import { creativeConfigs } from "./js/constants/creativeConfigs.js";
@@ -50,11 +52,11 @@ const { versions, host, storage } = require('uxp');
 const { app, action } = require('photoshop');
 const { arch, platform } = require('os');
 
-
+const mode = 'DEBUG';
 
 const Plugin = (() => {
-    
-    const logger = createLogger({ prefix: 'Plugin', initialLevel: 'DEBUG' });
+
+    const logger = createLogger({ prefix: 'Plugin', initialLevel: mode });
     // UXP modules
     ///Eventually i'll use this component  to open files, and send the user to the studio when finished. 
     //Add file load detection, which checks the activeDocument for a number of indicators
@@ -79,17 +81,17 @@ const Plugin = (() => {
             }
         },
     }
-    state.creative = {...creativeConfigs.find(config => config.name === state.format)};
-    
+    state.creative = { ...creativeConfigs.find(config => config.name === state.format) };
+
     const handleStateChange = (newState) => {
-    //const handleStateChange = (params = {panel: null, newState: null}) => {
-        if(!newState) return;
+        //const handleStateChange = (params = {panel: null, newState: null}) => {
+        if (!newState) return;
         newState.type === 'creative' ? state[newState.type] = newState : state.sections[newState.type] = newState;
         // console.log('handleStateChange', state);
         setHeaderText(generateTitleText());
     }
 
-    const {nav} = state.sections; 
+    const { nav } = state.sections;
 
     function setActiveMenu(event) {
         ///note: these are shallow changes so no spread to copy needed for now. May be needed layer if currentMode becomes a bit more comples in terms of the stuff i want
@@ -98,7 +100,7 @@ const Plugin = (() => {
         nav.targetElement.setAttribute(nav.activeAttribute, state.currentMode);
         setHeaderText(generateTitleText());
     }
-    
+
 
     async function applyTheme() {
         const themeValue = await getPSTheme();
@@ -118,11 +120,11 @@ const Plugin = (() => {
             if (targetRef !== "document") {
                 return;
             }
-        }        
+        }
         setHeaderText(generateTitleText());
         logger.debug(`Active document changed: ${app.activeDocument.name}`);
     }
-    
+
     function watchActiveDocumentChange() {
         const events = ["select", "open", "close"];
         action.addNotificationListener(events.map(ev => ({ event: ev })), documentChangeHandler);
@@ -130,7 +132,7 @@ const Plugin = (() => {
 
     function generateTitleText() {
         let sectionTitle = '';
-        switch(state.currentMode) {
+        switch (state.currentMode) {
             case 'build':
                 sectionTitle = getBuildStepTitle();
                 break;
@@ -148,9 +150,10 @@ const Plugin = (() => {
     }
 
     function getBuildStepTitle() {
+        logger.debug('getBuildStepTitle', state.sections.builder.currentStep);
         const stepNumber = state.sections.builder.currentStep;
         return `<span style="font-weight: bold">${capitalizeFirstLetter(state.format)}</span>: Step ${stepNumber + 1}`;//of ${state.sections.builder.buildSteps.length}`;
-    }   
+    }
 
     function setHeaderText(text) {
         state.sections.header.titleText = text;
@@ -158,7 +161,7 @@ const Plugin = (() => {
         return state.sections.header.element;
     }
 
-    
+
     // --- Initialization ---
     const initializePanel = async () => {
         const manifest = await loadPluginState();
@@ -173,24 +176,33 @@ const Plugin = (() => {
 
         //Initialize Sections
         try {
-            state.sections.editor = Editor.init(handleStateChange, state.creative);
-            state.sections.builder = Builder.init(handleStateChange, state.creative);
+            const builder = await Builder.init(handleStateChange, state.creative);
+            console.log('builder initialized');
+            console.log(builder);
+            state.sections.builder = { ...builder };
+            const editor = await Editor.init(handleStateChange, state.creative);
+            console.log('editor initialized');
+            console.log(editor);
+            state.sections.editor = { ...editor };
+
+            setHeaderText(generateTitleText());
         } catch (error) {
             console.error('Error initializing sections', error);
         }
-
         //Assign Event Listeners
         nav.element.addEventListener('change', setActiveMenu);
-        document.theme.onUpdated.addListener(applyTheme);  
+        document.theme.onUpdated.addListener(applyTheme);
         try {
             watchActiveDocumentChange();
         } catch (error) {
             logger.error('Error watching active document change', error);
         }
-        setHeaderText(generateTitleText());
+
         console.log("Plugin initialized", state);
+        //mode === 'DEBUG' && await clearAllSnapshots();
     }
 
+    getEl('#btnReload').addEventListener('click', () => location.reload());
     return { initializePanel, state }
 })();
 

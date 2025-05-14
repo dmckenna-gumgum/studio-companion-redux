@@ -1,4 +1,4 @@
-import { action, core } from "photoshop";
+import { action, core, app } from "photoshop";
 const { batchPlay } = action;
 const { executeAsModal } = core;
 
@@ -30,7 +30,8 @@ async function captureSnapshot(name) {
     { commandName: "Capture Snapshot" }
   );
   
-  return name;
+  const snapshotState = app.activeDocument.historyStates.getByName(name);
+  return snapshotState;
 }
 
 /*
@@ -64,69 +65,50 @@ async function restoreSnapshot(name) {
  * Clear all snapshots in the current document
  * @returns {boolean} True if operation was successful
  */
+
 async function clearAllSnapshots() {
+    // 1) Gather all HistoryState objects that are snapshots
     try {
-      await executeAsModal(
-        async () => {
-          // First, get a list of all snapshots
-          const result = await batchPlay(
-            [
-              {
-                _obj: "get",
-                _target: [
-                  {
-                    _ref: "document",
-                    _enum: "ordinal",
-                    _value: "targetEnum"
-                  }
-                ],
-                _options: {
-                  dialogOptions: "dontDisplay"
-                }
-              }
-            ],
-            { synchronousExecution: true }
-          );
-  
-          // If the document has history states with snapshots
-          if (result[0]?.historyStates?.length > 0) {
-            const historyStates = result[0].historyStates;
-            
-            // Filter out snapshot history states
-            const snapshots = historyStates.filter(state => state._obj === "snapshotClass");
-            
-            // Delete each snapshot
-            for (const snapshot of snapshots) {
-              await batchPlay(
-                [
-                  {
-                    _obj: "delete",
-                    _target: [
-                      {
-                        _ref: "snapshotClass",
-                        _name: snapshot.name
-                      }
+        const snapshots = app.activeDocument.historyStates.filter(h => h.snapshot);  
+        console.log('snapshots', snapshots);
+    
+        const count = snapshots.length;
+        if (count === 0) {
+            return 0; // nothing to delete
+        }
+    
+        // 2) Run a modal to delete each snapshot
+        await core.executeAsModal(
+            async () => {
+            for (const snapshot of snapshots.map(s => s._id)) {
+                await action.batchPlay(
+                    [
+                    {
+                        _obj: "delete",
+                        _target: [
+                        // reference the specific historyState by its ID
+                        { _ref: "historyState", _id: snapshot.id },
+                        // scope it to the correct document
+                        { _ref: "document", _id: app.activeDocument.id }
+                        ],
+                        _isCommand: true,
+                        _options: { dialogOptions: "dontDisplay" },
+                    },
                     ],
-                    _options: {
-                      dialogOptions: "dontDisplay"
-                    }
-                  }
-                ],
-                { synchronousExecution: true }
-              );
-            }
-          }
-        },
-        { commandName: "Clear All Snapshots" }
-      );
-      return true;
+                    {}
+                );
+                }
+            },
+            { commandName: "Clear All Snapshots" }
+        );  // executeAsModal ensures Photoshop stays responsive during the loop :contentReference[oaicite:1]{index=1}
+    
+        return count;
     } catch (error) {
-      console.error("Error clearing snapshots:", error);
-      return false;
+        console.error('Error gathering snapshots', error);
     }
 }
 
-/*
+/*  
  *******************************************************
  * History module that provides snapshot functionality
  *******************************************************

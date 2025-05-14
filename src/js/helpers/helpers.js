@@ -23,11 +23,11 @@ function getLayerContainer(selection) {
     if (parentContainer === null) {
         return { success: false, message: "Selected layers are not inside a container.", count: 0 };
     } else {
-        const allSameParent = selection.length <= 1 ? true : selection.every(item => item.parent.id === parentContainer.id);   
-        logger.debug(`(getLayerContainer) All same parent: ${allSameParent}`); 
+        const allSameParent = selection.length <= 1 ? true : selection.every(item => item.parent.id === parentContainer.id);
+        logger.debug(`(getLayerContainer) All same parent: ${allSameParent}`);
         if (!allSameParent) {
             return { success: false, message: "Selection spans multiple containers.", count: 0 };
-        } 
+        }
         return parentContainer;
     }
 }
@@ -36,13 +36,14 @@ function getLayerContainer(selection) {
  * Recursively finds all groups in the given layer set that are not the source container and whose names contain any of the given name filters.
  */
 function findValidGroups(potentialGroups, sourceContainer, nameFilters = []) {
-    ////legacy logic, updating to use regex instead
+
     return potentialGroups.reduce((acc, group) => {
         if (group.kind !== LayerKind.GROUP) return acc;
 
         const isNotSource = sourceContainer === null || group.id !== sourceContainer.id;
         let matchesFilter = false;
-        if(Array.isArray(nameFilters)) {
+        if (Array.isArray(nameFilters)) {
+            console.log("(findAllGroups) Testing array:", nameFilters, 'against', group.name);
             ////legacy search using array of strings.
             ////this will eventually need AND/OR logic to handle multiple filters
             matchesFilter = (
@@ -56,6 +57,7 @@ function findValidGroups(potentialGroups, sourceContainer, nameFilters = []) {
         } else {
             ////Updated version testing a regex expression. Will eventually transition everything to this but i don't want
             ////to break a bunch of shit in the meantime. 
+            console.log("(findAllGroups) Testing regex:", nameFilters, 'against', group.name);
             matchesFilter = nameFilters.test(group.name);
         }
 
@@ -109,12 +111,12 @@ function getLayerIndex(layer, sourceLayers) {
  * Duplicates a layer and moves it to the bottom of the target container layer stack.
  */
 async function duplicateAndMoveToBottom(sourceLayer, targetContainer, successfulPropagations) {
-    const duplicatedLayer = await sourceLayer.duplicate(targetContainer, ElementPlacement.PLACEINSIDE);    
+    const duplicatedLayer = await sourceLayer.duplicate(targetContainer, ElementPlacement.PLACEINSIDE);
     //immediately move to the bottom of each stack
     const targetLayers = targetContainer.layers; // Get layers AFTER duplication                            
-    const startLayerDepth = targetLayers.length - 1;    
+    const startLayerDepth = targetLayers.length - 1;
     await duplicatedLayer.move(targetLayers[startLayerDepth], ElementPlacement.PLACEAFTER);
-    successfulPropagations++;     
+    successfulPropagations++;
     duplicatedLayer.name = sourceLayer.name;
     return [duplicatedLayer, successfulPropagations];
 }
@@ -143,7 +145,7 @@ async function matchRelativePosition(duplicatedLayer, relativePositions, targetC
 
     const deltaX = desiredAbsoluteX - duplicatedLayerBounds.left;
     const deltaY = desiredAbsoluteY - duplicatedLayerBounds.top;
-    
+
     if (Math.abs(deltaX) > 0.1 || Math.abs(deltaY) > 0.1) { // Only translate if needed (avoid tiny adjustments)
         logger.debug(`(Modal Action) Translating duplicated layer by (${deltaX}, ${deltaY})`);
         await duplicatedLayer.translate(deltaX, deltaY);
@@ -160,24 +162,24 @@ async function matchRelativePosition(duplicatedLayer, relativePositions, targetC
  * @param {number} distanceFromBottom The source layer's distance from the bottom of the layer stack.    
  * @returns {Promise<void>}
  */
-async function placeAtCorrectDepth(layer, targetContainer, distanceFromBottom) {    
+async function placeAtCorrectDepth(layer, targetContainer, distanceFromBottom) {
     const targetLayers = targetContainer.layers; // Get layers AFTER duplication
     const targetPlacementFromBottom = Math.max(0, targetLayers.length - distanceFromBottom - 1);
     // Ensure target index is realistically attainable within the target container's current layers
     //if current layer the duplicate is on is deeper than the source, and the source layer is higher than the current max layer depth for the target container, move it up
-    if(targetPlacementFromBottom === 0) {
+    if (targetPlacementFromBottom === 0) {
         ///if the source index is 0, just put this element at the top of the layer stack.
         log(`(Modal Action) Moving duplicated layer to top (index 0)`);
         await layer.move(targetLayers[0], ElementPlacement.PLACEBEFORE);
     } else {
         //otherwise find the element currently one layer above the source, and place duplicate copy at that depth
-        const referenceLayerIndex = targetPlacementFromBottom - 1; 
-        if(referenceLayerIndex >= 0) {
+        const referenceLayerIndex = targetPlacementFromBottom - 1;
+        if (referenceLayerIndex >= 0) {
             const referenceLayer = targetLayers[referenceLayerIndex];
             // Important check: Don't try to move relative to self!
-            if (referenceLayer && referenceLayer.id !== layer.id) {    
+            if (referenceLayer && referenceLayer.id !== layer.id) {
                 log(`(Modal Action) Moving duplicated layer BELOW '${referenceLayer.name}' (aiming for index ${targetPlacementFromBottom})`);
-                await layer.move(referenceLayer, ElementPlacement.PLACEAFTER); 
+                await layer.move(referenceLayer, ElementPlacement.PLACEAFTER);
             } else {
                 log(`(Modal Action) Reference layer at ${referenceLayerIndex} is self or invalid. Skipping reorder for safety.`);
                 // Fallback: could attempt move to end, but might mess up order further.
@@ -203,7 +205,7 @@ async function showInputDialog(label, title, defaultValue = '', okText = 'OK', c
         try {
             // --- Get path to HTML file --- 
             const pluginFolder = await fs.getPluginFolder();
-            const htmlFile = await pluginFolder.getEntry('html/inputDialog.html'); 
+            const htmlFile = await pluginFolder.getEntry('html/inputDialog.html');
             if (!htmlFile) {
                 logger.debug("Dialog HTML file not found: html/inputDialog.html");
                 resolve({ dismissed: true, value: null });
@@ -273,7 +275,7 @@ async function showInputDialog(label, title, defaultValue = '', okText = 'OK', c
             const r = await dialog.uxpShowModal({
                 title: "Bulk Transformation",
                 resize: "none", // "both", "horizontal", "vertical"
-              });
+            });
             //dialog.showModal();
             setTimeout(() => inputField.focus(), 50); // Delay focus slightly
 
@@ -287,16 +289,16 @@ async function showInputDialog(label, title, defaultValue = '', okText = 'OK', c
 function convertToSmartObject(layer) {
     if (layer.kind === LayerKind.NORMAL || layer.kind === LayerKind.TEXT) {
         const commands = [];
-        const layerRef = {_ref: "layer", _id: layer.id };
+        const layerRef = { _ref: "layer", _id: layer.id };
         commands.push(
-            { 
-                _obj: "selectNoLayers", 
+            {
+                _obj: "selectNoLayers",
                 _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }]
             },
             {
                 _obj: "select",
                 _target: [layerRef],
-                makeVisible: false 
+                makeVisible: false
             },
             {
                 _obj: "newPlacedLayer",
@@ -313,19 +315,19 @@ function convertToSmartObject(layer) {
 
 
 function rasterizeLayer(layer, rasterizeText = true, rasterizeLayerStyles = false) {
-    const layerRef = {_ref: "layer", _id: layer.id };
+    const layerRef = { _ref: "layer", _id: layer.id };
 
-    
-    const commands= [
-        { 
-            _obj: "selectNoLayers", 
+
+    const commands = [
+        {
+            _obj: "selectNoLayers",
             _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }]
         },
         {
             _obj: "select",
             _target: [layerRef],
-            makeVisible: false 
-        }      
+            makeVisible: false
+        }
     ];
     if (rasterizeText) {
         commands.push({
@@ -343,7 +345,7 @@ function rasterizeLayer(layer, rasterizeText = true, rasterizeLayerStyles = fals
             }
         });
     }
-    
+
     console.log(`(rasterizeLayer) Prepared Rasterization Command for ${layer.name}:`, commands);
     return commands;
     //const rasterizeResult = await batchPlay(rasterizeCommands, {});
@@ -353,7 +355,7 @@ function rasterizeLayer(layer, rasterizeText = true, rasterizeLayerStyles = fals
 async function duplicateBoardToBoard(sourceBoard, targetBoards) {
     const layerDuplicates = [];
     const sourceLayers = sourceBoard.layers;
-    if(targetBoards.length === 0) {
+    if (targetBoards.length === 0) {
         console.error("(duplicateBoardToBoard) No target boards found.");
         return layerDuplicates;
     } else {
@@ -381,11 +383,11 @@ async function convertAllLayersToSmartObjects(artboard, rasterizeText, rasterize
     // console.log("(convertAllLayersToSmartObjects) Converting layers to smart objects:", artboard.layers);
     const commands = [];
     //loop through all layers in the artboard and prepare the batch command to execute
-    for (const layer of artboard.layers) {        
-        if (layer.kind === LayerKind.NORMAL || layer.kind === LayerKind.TEXT) {            
+    for (const layer of artboard.layers) {
+        if (layer.kind === LayerKind.NORMAL || layer.kind === LayerKind.TEXT) {
             //if it's a text layer, and rasterizeText is true, add commands to rasterize it first
             try {
-                if(rasterizeLayerStyles || rasterizeText) commands.push(...rasterizeLayer(layer, rasterizeText, rasterizeLayerStyles));
+                if (rasterizeLayerStyles || rasterizeText) commands.push(...rasterizeLayer(layer, rasterizeText, rasterizeLayerStyles));
             } catch (error) {
                 log("(convertAllLayersToSmartObjects) Error rasterizing layer:", layer.name, error);
             }
@@ -396,7 +398,7 @@ async function convertAllLayersToSmartObjects(artboard, rasterizeText, rasterize
                 log("(convertAllLayersToSmartObjects) Error converting layer to smart object:", layer.name, error);
             }
         }
-    }  
+    }
     //finally, execute the commands
     const results = await batchPlay(commands, {});
     log(`(convertAllLayersToSmartObjects) Completed conversion of layers inside ${artboard.name} to smart objects.`);
@@ -405,27 +407,27 @@ async function convertAllLayersToSmartObjects(artboard, rasterizeText, rasterize
 
 async function getArtboardFrame(artboardLayer) {
     const [{ artboard: { artboardRect } }] = await batchPlay(
-      [{
-        _obj: "get",
-        _target: [
-          { _ref: "property", _property: "artboard" },
-          { _ref: "layer",    _id: artboardLayer.id    }
-        ]
-      }],
-      { synchronousExecution: true }
+        [{
+            _obj: "get",
+            _target: [
+                { _ref: "property", _property: "artboard" },
+                { _ref: "layer", _id: artboardLayer.id }
+            ]
+        }],
+        { synchronousExecution: true }
     );
     return artboardRect;  // { left, top, right, bottom }
 }
 
 async function getGuidesForFrame(frame) {
     return app.activeDocument.guides.filter(guide => {
-      // ensure numeric
-      const pos = Math.round(parseFloat(guide.coordinate));
-      if (guide.direction === Constants.Direction.VERTICAL) {
-        return pos >= frame.left && pos <= frame.right;
-      }
-      // HORIZONTAL
-      return pos >= frame.top  && pos <= frame.bottom;
+        // ensure numeric
+        const pos = Math.round(parseFloat(guide.coordinate));
+        if (guide.direction === Constants.Direction.VERTICAL) {
+            return pos >= frame.left && pos <= frame.right;
+        }
+        // HORIZONTAL
+        return pos >= frame.top && pos <= frame.bottom;
     });
 }
 
@@ -433,7 +435,7 @@ async function moveBoardAndGuide(artboard, x, y, specificGuides = null) {
     try {
         console.log("(moveBoardAndGuide) Using External Guide Target:", specificGuides);
         const frame = await getArtboardFrame(artboard);
-        const guides = specificGuides === null ? await getGuidesForFrame(frame) : specificGuides; 
+        const guides = specificGuides === null ? await getGuidesForFrame(frame) : specificGuides;
         console.log("(moveBoardAndGuide) Guides: ", guides);
         await artboard.translate(x, y);
         console.log("(moveBoardAndGuide) Moving board and guides:", artboard.name, x, y, 'using guides:', guides);
@@ -451,7 +453,7 @@ async function moveBoardAndGuide(artboard, x, y, specificGuides = null) {
 }
 
 async function cloneGuidesForFrame(frame) {
-    const guides = await getGuidesForFrame(frame); 
+    const guides = await getGuidesForFrame(frame);
     const clonedGuides = guides.map(guide => {
         const newGuide = guide.duplicate();
         newGuide.coordinate = parseFloat(guide.coordinate);

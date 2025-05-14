@@ -1,9 +1,19 @@
 TODO:
-Scale & Rotate Buttons
+
+Short Term:
 Allow User to Revert to state at various points in the build assistant process
 Editor Functions to Decrement/Increment selected artboard.
-AI Assistance for Builder
 Prep File for Production
 Production-Ready Modal: See warning and errors requiring addressing.
-Current File editing - localstorage to store sessions across different PSDs so you can maintain separate states without issues.
+Mocks on how to plug this into Mindset + Support DCO
+Duplication of Guides.
 
+Long Term:
+Hang Time Support
+AI Assistance for Builder
+Current File editing - localstorage to store sessions across different PSDs so you can maintain separate states without issues.
+Export Statics to PDF/Slide/Gif
+Mocks of a DCO workflow with the plugin.
+Smart Template into artboard states generation
+ - Upload Asset pack, pick a smart template type, hit generate and it kicks that out. 
+ - Pull list of smart tmeplates from somewhere online.

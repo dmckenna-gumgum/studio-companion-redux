@@ -12,24 +12,24 @@ const Builder = (() => {
     const logger = createLogger({ prefix: 'Builder', initialLevel: 'INFO' });
 
     const stateHandler = {
-        set: function(target, property, value) {
+        set: function (target, property, value) {
             target[property] = value;
             _notifyStateChange(state);
             return true;
         },
-        get: function(target, property) {
+        get: function (target, property) {
             return target[property];
         }
     };
 
     const creativeStateHandler = {
-        set: function(target, property, value) {
+        set: function (target, property, value) {
             console.log('creativeStateHandler', target, property, value);
             target[property] = value;
             _notifyStateChange(creativeState);
             return true;
         },
-        get: function(target, property) {
+        get: function (target, property) {
             return target[property];
         }
     };
@@ -43,7 +43,6 @@ const Builder = (() => {
         }
     }
 
-
     const _state = {
         type: 'builder',
         element: getEl('#build-menu'),
@@ -55,8 +54,8 @@ const Builder = (() => {
             history: [],
         },
         stepButtons: [
-            {    
-                description: 'Move to the next step',            
+            {
+                description: 'Move to the next step',
                 name: 'Next Step',
                 buttonElement: getEl('#btnNext'),
                 buttonId: 'btnNext',
@@ -65,7 +64,7 @@ const Builder = (() => {
                 handlerFunc: runStep
             },
             {
-                description: 'Move to the previous step',            
+                description: 'Move to the previous step',
                 name: 'Previous Step',
                 buttonElement: getEl('#btnPrev'),
                 buttonId: 'btnPrev',
@@ -74,7 +73,7 @@ const Builder = (() => {
                 handlerFunc: runStep
             },
             {
-                description: 'Move to the next sub step',            
+                description: 'Move to the next sub step',
                 name: 'Next Sub Step',
                 buttonElement: getEl('#btnAddStep'),
                 buttonId: '#btnAddStep',
@@ -104,7 +103,7 @@ const Builder = (() => {
                     device: ['desktop'],
                     sequences: ['expanded', 'collapsed'],
                     functions: [
-                        {id: 1, doIt:normalizeAndPropagateRestStates, options: {device: ['desktop'], sequences: ['expanded', 'collapsed']}},
+                        { id: 1, doIt: normalizeAndPropagateRestStates, options: { device: ['desktop'], sequences: ['expanded', 'collapsed'] } },
                         //{id: 2, doIt:readyPositioningForIntros, options: {device: ['desktop'], sequences: ['expanded', 'collapsed']}},
                     ],
                     // funcs: [normalizeAndPropagateRestStates],
@@ -125,7 +124,7 @@ const Builder = (() => {
                     device: 'mobile',
                     sequences: ['expanded', 'collapsed'],
                     functions: [
-                        {id: 1, doIt:revealAndPropagateToRestState, options: {device: ['mobile'], sequences: ['expanded', 'collapsed']}}
+                        { id: 1, doIt: revealAndPropagateToRestState, options: { device: ['mobile'], sequences: ['expanded', 'collapsed'] } }
                     ],
                     callbacks: [incrementStep],
                     options: ['mobile'],
@@ -145,7 +144,7 @@ const Builder = (() => {
                     device: ['mobile'],
                     sequences: ['expanded', 'collapsed'],
                     functions: [
-                        {id: 1, doIt:normalizeAndPropagateRestStates, options: {device: ['mobile'], sequences: ['expanded', 'collapsed']}}
+                        { id: 1, doIt: normalizeAndPropagateRestStates, options: { device: ['mobile'], sequences: ['expanded', 'collapsed'] } }
                     ],
                     callbacks: [incrementStep, updateArtboardState],
                     options: [],
@@ -166,7 +165,7 @@ const Builder = (() => {
                     sequences: ['intro'],
                     functions: [
                         //{id: 1, doIt:readyPositioningForIntros, options: {device: ['desktop'], sequences: ['intro']}},
-                        {id: 2, doIt:propagateToIntro, options: {device: ['desktop'], sequences: ['intro'], callbacks: [incrementStep, incrementSubStep, updateArtboardState]}}
+                        { id: 2, doIt: propagateToIntro, options: { device: ['desktop'], sequences: ['intro'], callbacks: [incrementStep, incrementSubStep, updateArtboardState] } }
                     ],
                     callbacks: [incrementStep, incrementSubStep, updateArtboardState],
                     options: [],
@@ -183,7 +182,7 @@ const Builder = (() => {
                     type: 'substep',
                     device: ['desktop'],
                     sequences: ['intro'],
-                    functions: [{id: 1, doIt:propagateToIntro, options: {device: ['desktop'], sequences: ['intro']}}],
+                    functions: [{ id: 1, doIt: propagateToIntro, options: { device: ['desktop'], sequences: ['intro'] } }],
                     callbacks: [incrementSubStep, updateArtboardState],
                     options: ['desktop'],
                     name: 'Create Desktop Intro Board',
@@ -194,7 +193,7 @@ const Builder = (() => {
                     type: 'next',
                     device: ['mobile'],
                     sequences: ['intro'],
-                    functions: [{id: 1, doIt:propagateToIntro, options: {device: ['mobile'], sequences: ['intro']}}],
+                    functions: [{ id: 1, doIt: propagateToIntro, options: { device: ['mobile'], sequences: ['intro'] } }],
                     callbacks: [incrementStep, incrementSubStep, updateArtboardState],
                     options: ['mobile'],
                     name: 'Create Mobile Intro Board',
@@ -210,7 +209,7 @@ const Builder = (() => {
                     type: 'substep',
                     device: ['mobile'],
                     sequences: ['intro'],
-                    functions: [{id: 1, doIt:propagateToIntro, options: {device: ['mobile'], sequences: ['intro']}}],
+                    functions: [{ id: 1, doIt: propagateToIntro, options: { device: ['mobile'], sequences: ['intro'] } }],
                     callbacks: [incrementSubStep, updateArtboardState],
                     options: ['mobile'],
                     name: 'Create Mobile Intro Board',
@@ -220,12 +219,12 @@ const Builder = (() => {
                 nextAction: {
                     type: 'next',
                     device: 'both',
-                    functions: [{id: 1, doIt:null, options: {device: ['desktop', 'mobile'], sequences: ['intro']}}], ///this will be a convert and sanitization action,
+                    functions: [{ id: 1, doIt: null, options: { device: ['desktop', 'mobile'], sequences: ['intro'] } }], ///this will be a convert and sanitization action,
                     callbacks: [incrementStep],
                     options: [],
                     name: 'Finalize Project',
                     description: 'Fix Missing Smart Objects, Convert any lingering Raster Layers or Text, and Warn the User if Anything Looks Amiss'
-                } 
+                }
             },
             {
                 id: 6,
@@ -235,7 +234,7 @@ const Builder = (() => {
                 action: null,
                 nextAction: {
                     type: 'next',
-                    functions: [{id: 1, doIt:null, options: {device: ['desktop', 'mobile'], sequences: ['intro']}}], ///this will be a convert and sanitization action,
+                    functions: [{ id: 1, doIt: null, options: { device: ['desktop', 'mobile'], sequences: ['intro'] } }], ///this will be a convert and sanitization action,
                     options: ['mobile'],
                     name: 'Move into Studio',
                     description: 'Move the Project into Studio' //maybe one day this can be done via API?
@@ -246,7 +245,7 @@ const Builder = (() => {
             desktop: 0,
             mobile: 0,
         }
-    }   
+    }
 
     const state = new Proxy(_state, stateHandler);
     let _creativeState = null,
@@ -261,7 +260,7 @@ const Builder = (() => {
     }
 
     const destroyEventListener = (eventListener) => {
-        if(!eventListener.element || !eventListener.event || !eventListener.handlerFunc) return;
+        if (!eventListener.element || !eventListener.event || !eventListener.handlerFunc) return;
         eventListener.element.removeEventListener(eventListener.event, eventListener.eventHandler);
         _eventListeners.splice(_eventListeners.indexOf(eventListener), 1);
     }
@@ -271,13 +270,13 @@ const Builder = (() => {
             desktop: 0,
             mobile: 0,
         }
-    }   
+    }
 
     const getIntroSteps = (device) => {
         ///these are temporary until i'm properly pushing created intro boards into the config above, then i can use length of those arrays rather than a separate number 
         return legacyBuilderState.introSteps[device];
     }
-    
+
     const setIntroSteps = (device, step) => {
         ///these are temporary until i'm properly pushing created intro boards into the config above, then i can use length of those arrays rather than a separate number 
         // logger.debug('setIntroSteps', device, step);
@@ -296,15 +295,15 @@ const Builder = (() => {
         return state.buildSteps[getBuildStepNumber()];
     }
 
-    
-   //////////////////////////////////////
+
+    //////////////////////////////////////
     ////////////BUILD ACTIONS/////////////
     //////////////////////////////////////
-    async function runStep(event, config) {  
+    async function runStep(event, config) {
 
         ///before running step capture a snapshot of the current state;
         try {
-            await saveSnapshot();
+            config.options[0] === 'next' && await saveSnapshot();
         } catch (error) {
             logger.error('snapshot error', error);
         }
@@ -317,13 +316,13 @@ const Builder = (() => {
         const action = config.options[0] === 'next' ? buildStep.nextAction : buildStep.action;
         console.log('action', action);
         // const creativeSections = creativeState.devices.filter(item => action.device.includes(item.device));
-        console.log('state pre-send',creativeState)
+        console.log('state pre-send', creativeState)
         const stateToPass = pickProps(creativeState.devices, action.device);
         console.log('runStep', action, stateToPass);
         try {
             const results = await executeStepAction(action, stateToPass);
             console.log('runStep results', results);
-            if(results.every(result => result.success)) {
+            if (results.every(result => result.success)) {
                 console.log('runStep success');
                 results.forEach((result) => {
                     action.callbacks?.forEach(callback => callback?.(action, result));
@@ -337,35 +336,35 @@ const Builder = (() => {
             // await core.showAlert(`Error ${builder.buildSteps[currentStep].name}: ${error}`);
         }
     }
-    
+
     async function executeStepAction(action, stateToPass) {
         const { functions = [] } = action;
-      
+
         // If there are no functions, return a single “success” result
         if (functions.length === 0) {
             return [{ success: true, message: "No functions to execute." }];
         }
-      
+
         // We start with a Promise that resolves to an empty array of results
         const finalResults = await functions.reduce(
             async (previousPromise, { doIt, options }) => {
 
                 // wait for the array of results so far
                 const resultsSoFar = await previousPromise;
-        
+
                 // now run the next function
                 const result = await doIt(action, stateToPass, options);
                 logger.log(`Build Action Result: ${result.message}`);
                 // (handle throws inside here if you want, pushing a failure object)
-        
+
                 // push it onto the array
                 resultsSoFar.push(result);
 
                 // return the updated array for the next iteration
                 return resultsSoFar;
-            },  
+            },
             Promise.resolve([])  // initial “resultsSoFar” is []
-        );      
+        );
 
         logger.log(`Build Action Results:`, finalResults);
         return finalResults;   // this is an array of all { success, message } objects
@@ -407,61 +406,62 @@ const Builder = (() => {
 
     function updateArtboardState(action, result) {
         logger.log(`${action.name} Completed. Updating Creative State With:`, result.payload);
-        if (!result.payload || !creativeState.devices) return;        
-        creativeState.devices = {...creativeState.devices, ...result.payload.devices}
+        if (!result.payload || !creativeState.devices) return;
+        creativeState.devices = { ...creativeState.devices, ...result.payload.devices }
         logger.log('creativeState', creativeState);
         //mergeArraysByKey(creativeState.devices, result.payload, 'device');
     }
 
     function incrementSubStep(action, results) {
         // buildStep.options[1] = setIntroSteps(buildStep.device, getIntroSteps(buildStep.device)+1);
-        const introSteps = setIntroSteps(action.device, getIntroSteps(action.device)+1);
+        const introSteps = setIntroSteps(action.device, getIntroSteps(action.device) + 1);
         //logger.debug(`DEBUG:${action.device} Intro Sequence Now Has ${introSteps} Steps`);
-    } 
+    }
 
-    function incrementStep(action) {   
-        const currentStep = setBuildStep(Math.min(getBuildStepNumber()+1, state.buildSteps.length-1));
+    function incrementStep(action) {
+        const currentStep = setBuildStep(Math.min(getBuildStepNumber() + 1, state.buildSteps.length - 1));
         const buildStep = getBuildStep();
         //console.log(`DEBUG: Incrementing To Main Step: ${currentStep+1}, named: ${buildStep.name}`); 
         updateBuildInterface(buildStep);
-        
+
     }
 
     async function saveSnapshot() {
         try {
             const stepNumber = getBuildStepNumber();
             const snapShotName = `Step_${stepNumber}`;
-            await History.capture(snapShotName);
-            createHistoryEntry(snapShotName, stepNumber);
+            const historyState = await History.capture(snapShotName);
+            createHistoryEntry(snapShotName, stepNumber, historyState);
             updateHistoryUI();
         } catch (error) {
             return error;
         }
     }
-    
+
     function updateHistoryUI() {
-        if(state.buildHistory.history.length > 0) {
+        if (state.buildHistory.history.length > 0) {
             state.buildHistory.containerEl.classList.add('-show');
         } else {
             state.buildHistory.containerEl.classList.remove('-show');
         }
     }
-    
-    function createHistoryEntry(snapShotName, stepNumber) {
+
+    function createHistoryEntry(snapShotName, stepNumber, historyState) {
         try {
             const newHistoryEntry = {};
             newHistoryEntry.stepNumber = stepNumber;
             newHistoryEntry.snapshotName = snapShotName;
+            newHistoryEntry.historyState = historyState;
             const btnMarkup = document.createElement(`sp-button`);
             btnMarkup.classList.add('plugin-history-btn');
             btnMarkup.id = `historyBtn_${stepNumber}`;
-            btnMarkup.textContent = `${stepNumber+1}`;
+            btnMarkup.textContent = `${stepNumber + 1}`;
             btnMarkup.setAttribute('data-step', stepNumber);
             btnMarkup.setAttribute('size', 's');
             btnMarkup.setAttribute('treatment', 'outline');
             btnMarkup.setAttribute('variant', 'secondary');
-            btnMarkup.setAttribute('data-snapshot', snapShotName);  
-            newHistoryEntry.buttonEl =state.buildHistory.buttonGroup.appendChild(btnMarkup);
+            btnMarkup.setAttribute('data-snapshot', snapShotName);
+            newHistoryEntry.buttonEl = state.buildHistory.buttonGroup.appendChild(btnMarkup);
             const eventObj = {
                 eventName: `HistoryStep_${stepNumber}`,
                 eventType: 'click',
@@ -501,44 +501,50 @@ const Builder = (() => {
     function updateBuildInterface(buildStep) {
         const currentStep = getBuildStepNumber();
         // console.log(currentStep,  state.infoElements)
-        state.infoElements.stepNumber.textContent = `Step ${currentStep+1}:`;
+        state.infoElements.stepNumber.textContent = `Step ${currentStep + 1}:`;
         state.infoElements.stepName.textContent = buildStep.name;
         state.infoElements.stepText.textContent = buildStep.directions;
-        const progressWidth = Math.max(5, currentStep/(state.buildSteps.length-1)*100);
-        state.infoElements.progressBarFill.style.width = `${progressWidth}%`;  
+        const progressWidth = Math.max(5, currentStep / (state.buildSteps.length - 1) * 100);
+        state.infoElements.progressBarFill.style.width = `${progressWidth}%`;
         if (currentStep === 4) {
-        // state.infoElements.nextButton.textContent = 'Finish';
+            // state.infoElements.nextButton.textContent = 'Finish';
         }
-        if(buildStep.action !== null) {
+        if (buildStep.action !== null) {
             state.infoElements.subUi.classList.add('-show');
         } else {
             state.infoElements.subUi.classList.remove('-show');
         }
     }
 
-   const init = (onUpdate, creative) => {
-        _onUpdateCallback = onUpdate;
-        _creativeState = creative;
-        creativeState = new Proxy(_creativeState, creativeStateHandler);
-        state.stepButtons.forEach(button => {
-            const eventObj = {
-                eventName: `${button.name}_Handler`,
-                eventType: 'click',
-                name: button.name,
-                description: button.description,
-                actionReturns: null,
-                element: button.buttonElement,
-                elementId: button.buttonId,
-                action: null, ///handlerFunc will pick the action based on buildstep instead
-                options: button.options,
-                callback: null,
-                handlerFunc: button.handlerFunc
+    const init = async (onUpdate, creative) => {
+        return new Promise((resolve, reject) => {
+            try {
+                _onUpdateCallback = onUpdate;
+                _creativeState = creative;
+                creativeState = new Proxy(_creativeState, creativeStateHandler);
+                state.stepButtons.forEach(button => {
+                    const eventObj = {
+                        eventName: `${button.name}_Handler`,
+                        eventType: 'click',
+                        name: button.name,
+                        description: button.description,
+                        actionReturns: null,
+                        element: button.buttonElement,
+                        elementId: button.buttonId,
+                        action: null, ///handlerFunc will pick the action based on buildstep instead
+                        options: button.options,
+                        callback: null,
+                        handlerFunc: button.handlerFunc
+                    }
+                    registerEventListener(eventObj);
+                });
+                const buildStep = getBuildStep();
+                updateBuildInterface(buildStep);
+                resolve(state);
+            } catch (error) {
+                reject(error);
             }
-            registerEventListener(eventObj);
-        });  
-        const buildStep = getBuildStep();
-        updateBuildInterface(buildStep);
-        return state
+        });
     }
     return { init };
 })();

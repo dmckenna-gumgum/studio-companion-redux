@@ -59,7 +59,7 @@ async function linkLayersByName() {
                 executionResult = { success: true, message: "Need at least 2 matching layers to link.", count: 0 };
             } else {
                 const anchorLayer = matchingLayers[0]; // Link everything to the first one found
-                console.log(`(Modal Action) Linking ${matchingLayers.length -1} layers to anchor: ${anchorLayer.name}`);
+                console.log(`(Modal Action) Linking ${matchingLayers.length - 1} layers to anchor: ${anchorLayer.name}`);
                 for (let i = 1; i < matchingLayers.length; i++) {
                     try {
                         matchingLayers[i].link(anchorLayer);
@@ -69,11 +69,11 @@ async function linkLayersByName() {
                         // Decide if this should halt the process or just skip
                     }
                 }
-                executionResult = { success: true, message: `Linked ${linkedCount + 1} layers together.`, count: linkedCount + 1 }; // +1 for the anchor
+                executionResult = { success: true, payload: matchingLayers, message: `Linked ${linkedCount + 1} layers together.`, count: linkedCount + 1 }; // +1 for the anchor
             }
 
             // Resume history state
-            await hostControl.resumeHistory({"documentID": activeDoc.id});
+            await hostControl.resumeHistory({ "documentID": activeDoc.id });
             console.log("(Modal Action) History resumed.");
             return executionResult;
 

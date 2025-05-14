@@ -1,17 +1,25 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="utf-8">
     <title>Creative Studio Companion</title>
     <link rel="stylesheet" href="css/main.css">
 </head>
+
 <body>
-    
     <script src="main.bundle.js"></script>
     <sp-theme id="theme" system="express" color="dark" scale="medium" global>
         <div class="plugin-container">
             <div class="plugin-header">
-                <h2 id="plugin-title" class="plugin-title">Velocity: Editor</h3>
+                <div style="display: flex; align-items: center; justify-content: flex-start;">
+                    <sp-button variant="secondary" treatment="outline" class="plugin-step-button" id="btnReload"
+                        style="flex-direction: row-reverse;">
+                        Reload
+                        <sp-icon-refresh slot="icon" style="margin-left: 0.5rem; margin-right: 0"></sp-icon-refresh>
+                    </sp-button>
+                    <h2 id="plugin-title" class="plugin-title">Loading...</h2>
+                </div>
                 <div class="plugin-history" id="buildHistory">
                     <span class="plugin-history-label">Revert To Step:</span>
                     <sp-button-group id="buildHistoryButtons" size="s"></sp-button-group>
@@ -20,23 +28,13 @@
             <div class="plugin-main">
                 <div class="plugin-nav">
                     <sp-sidenav class="plugin-sidenav" defaultValue="build">
-                        <sp-sidenav-item
-                            value="build"
-                            label="Build Assistant"
-                            selected
-                        >
+                        <sp-sidenav-item value="build" label="Build Assistant" selected>
                             <sp-icon-magic-wand slot="icon"></sp-icon-magic-wand>
                         </sp-sidenav-item>
-                        <sp-sidenav-item
-                            value="editor"
-                            label="Editor"
-                        >
+                        <sp-sidenav-item value="editor" label="Editor">
                             <sp-icon-edit slot="icon"></sp-icon-edit>
                         </sp-sidenav-item>
-                        <sp-sidenav-item
-                            value="production"
-                            label="Production"
-                        >
+                        <sp-sidenav-item value="production" label="Production">
                             <sp-icon-application-delivery slot="icon"></sp-icon-application-delivery>
                         </sp-sidenav-item>
                     </sp-sidenav>
@@ -45,7 +43,8 @@
                     <div class="plugin-menu plugin-menu--build plugin-flex--flex-column" id="build-menu">
                         <div class="plugin-step-section">
                             <div class="plugin-progress-component">
-                                <h5 class="plugin-step-note"><span class="plugin-step-number">Step 1:</span> <span class="plugin-step-name">Design Desktop Rest States</span></h5>
+                                <h5 class="plugin-step-note"><span class="plugin-step-number">Step 1:</span> <span
+                                        class="plugin-step-name">Design Desktop Rest States</span></h5>
                                 <div class="plugin-progress-bar">
                                     <div class="plugin-progress-bar-fill"></div>
                                 </div>
@@ -54,37 +53,58 @@
                         <div class="plugin-step-section plugin-step-section--fixed">
                             <sp-button variant="secondary" treatment="outline" class="plugin-step-button" id="btnPrev">
                                 <sp-icon-arrow500 slot="icon" style="transform:scale(-1,1)"></sp-icon-arrow500>
-                                Previous                                
+                                Previous
                             </sp-button>
-                            <p class="plugin-step-text">Start by building the designs for the rest state of your Velocity. Velocity Ads have two sizes, and each size has two rest states. Once you’ve completed these four boards click next and I’ll convert any remaining raster or text layers to smart objects and move to the next step.</p>
+                            <p class="plugin-step-text">Start by building the designs for the rest state of your
+                                Velocity. Velocity Ads have two sizes, and each size has two rest states. Once you’ve
+                                completed these four boards click next and I’ll convert any remaining raster or text
+                                layers to smart objects and move to the next step.</p>
                             <div class="plugin-step-sub-ui">
-                                <sp-button variant="accent" label="Icon only" icon-only id="btnAddStep" size="xl" class="plugin-sub-step-button">
-                                    <svg xmlns="http://www.w3.org/2000/svg" role="img" slot="icon" height="18" viewBox="0 0 18 18" width="18" style="transform: translate(-0.75px, -0.4px) scale(1.5)">
-                                        <path class="fill" d="M12.08,2.7215l.514-.8885a7.97354,7.97354,0,0,0-2.7-.803V2.063A6.94168,6.94168,0,0,1,12.08,2.7215Z" />
-                                        <path class="fill" d="M14.765,5.033l.9-.5175a8.06649,8.06649,0,0,0-1.926-1.985l-.519.894A7.03319,7.03319,0,0,1,14.765,5.033Z" />
-                                        <path class="fill" d="M15.9665,8.3315H17a7.95519,7.95519,0,0,0-.6895-2.6455L15.415,6.2A6.95,6.95,0,0,1,15.9665,8.3315Z" />
-                                        <path class="fill" d="M15.9665,9.6685a6.95,6.95,0,0,1-.55,2.129l.8955.516A7.95513,7.95513,0,0,0,17,9.6685Z" />
-                                        <path class="fill" d="M13.22,14.5755l.5165.894a8.06544,8.06544,0,0,0,1.926-1.985l-.9-.5175A7.033,7.033,0,0,1,13.22,14.5755Z" />
-                                        <path class="fill" d="M9.8925,15.937V16.97a7.97354,7.97354,0,0,0,2.7-.803l-.5125-.8885A6.94146,6.94146,0,0,1,9.8925,15.937Z" />
-                                        <path class="fill" d="M6.269,15.447l-.514.8885A7.99637,7.99637,0,0,0,8.5535,17V15.9775A6.96845,6.96845,0,0,1,6.269,15.447Z" />
-                                        <path class="fill" d="M3.3695,13.1465l-.9.5175a8.06609,8.06609,0,0,0,2.107,2.031l.513-.8875A7.03548,7.03548,0,0,1,3.3695,13.1465Z" />
-                                        <path class="fill" d="M2.0335,9.6685H1a7.94984,7.94984,0,0,0,.787,2.847L2.6825,12A6.94449,6.94449,0,0,1,2.0335,9.6685Z" />
-                                        <path class="fill" d="M2.6825,6,1.787,5.4845A7.94984,7.94984,0,0,0,1,8.3315H2.0335A6.94449,6.94449,0,0,1,2.6825,6Z" />
-                                        <path class="fill" d="M5.092,3.192l-.513-.8875a8.06609,8.06609,0,0,0-2.107,2.031l.9.5175A7.03639,7.03639,0,0,1,5.092,3.192Z" />
-                                        <path class="fill" d="M8.5535,2.0225V1a7.99514,7.99514,0,0,0-2.8.6645l.5135.8885A6.96854,6.96854,0,0,1,8.5535,2.0225Z" />
-                                        <path class="fill" d="M14,9.5a.5.5,0,0,1-.5.5H10v3.5a.5.5,0,0,1-.5.5h-1a.5.5,0,0,1-.5-.5V10H4.5A.5.5,0,0,1,4,9.5v-1A.5.5,0,0,1,4.5,8H8V4.5A.5.5,0,0,1,8.5,4h1a.5.5,0,0,1,.5.5V8h3.5a.5.5,0,0,1,.5.5Z" />
+                                <sp-button variant="accent" label="Icon only" icon-only id="btnAddStep" size="xl"
+                                    class="plugin-sub-step-button">
+                                    <svg xmlns="http://www.w3.org/2000/svg" role="img" slot="icon" height="18"
+                                        viewBox="0 0 18 18" width="18"
+                                        style="transform: translate(-0.75px, -0.4px) scale(1.5)">
+                                        <path class="fill"
+                                            d="M12.08,2.7215l.514-.8885a7.97354,7.97354,0,0,0-2.7-.803V2.063A6.94168,6.94168,0,0,1,12.08,2.7215Z" />
+                                        <path class="fill"
+                                            d="M14.765,5.033l.9-.5175a8.06649,8.06649,0,0,0-1.926-1.985l-.519.894A7.03319,7.03319,0,0,1,14.765,5.033Z" />
+                                        <path class="fill"
+                                            d="M15.9665,8.3315H17a7.95519,7.95519,0,0,0-.6895-2.6455L15.415,6.2A6.95,6.95,0,0,1,15.9665,8.3315Z" />
+                                        <path class="fill"
+                                            d="M15.9665,9.6685a6.95,6.95,0,0,1-.55,2.129l.8955.516A7.95513,7.95513,0,0,0,17,9.6685Z" />
+                                        <path class="fill"
+                                            d="M13.22,14.5755l.5165.894a8.06544,8.06544,0,0,0,1.926-1.985l-.9-.5175A7.033,7.033,0,0,1,13.22,14.5755Z" />
+                                        <path class="fill"
+                                            d="M9.8925,15.937V16.97a7.97354,7.97354,0,0,0,2.7-.803l-.5125-.8885A6.94146,6.94146,0,0,1,9.8925,15.937Z" />
+                                        <path class="fill"
+                                            d="M6.269,15.447l-.514.8885A7.99637,7.99637,0,0,0,8.5535,17V15.9775A6.96845,6.96845,0,0,1,6.269,15.447Z" />
+                                        <path class="fill"
+                                            d="M3.3695,13.1465l-.9.5175a8.06609,8.06609,0,0,0,2.107,2.031l.513-.8875A7.03548,7.03548,0,0,1,3.3695,13.1465Z" />
+                                        <path class="fill"
+                                            d="M2.0335,9.6685H1a7.94984,7.94984,0,0,0,.787,2.847L2.6825,12A6.94449,6.94449,0,0,1,2.0335,9.6685Z" />
+                                        <path class="fill"
+                                            d="M2.6825,6,1.787,5.4845A7.94984,7.94984,0,0,0,1,8.3315H2.0335A6.94449,6.94449,0,0,1,2.6825,6Z" />
+                                        <path class="fill"
+                                            d="M5.092,3.192l-.513-.8875a8.06609,8.06609,0,0,0-2.107,2.031l.9.5175A7.03639,7.03639,0,0,1,5.092,3.192Z" />
+                                        <path class="fill"
+                                            d="M8.5535,2.0225V1a7.99514,7.99514,0,0,0-2.8.6645l.5135.8885A6.96854,6.96854,0,0,1,8.5535,2.0225Z" />
+                                        <path class="fill"
+                                            d="M14,9.5a.5.5,0,0,1-.5.5H10v3.5a.5.5,0,0,1-.5.5h-1a.5.5,0,0,1-.5-.5V10H4.5A.5.5,0,0,1,4,9.5v-1A.5.5,0,0,1,4.5,8H8V4.5A.5.5,0,0,1,8.5,4h1a.5.5,0,0,1,.5.5V8h3.5a.5.5,0,0,1,.5.5Z" />
                                     </svg>
                                 </sp-button>
                                 <sp-label>Add Another Intro Step</sp-label>
                             </div>
-                            <sp-button variant="secondary" treatment="outline" class="plugin-step-button" id="btnNext" style="flex-direction: row-reverse;">
+                            <sp-button variant="secondary" treatment="outline" class="plugin-step-button" id="btnNext"
+                                style="flex-direction: row-reverse;">
                                 Next
-                                <sp-icon-arrow500 slot="icon" style="margin-left: 0.5rem; margin-right: 0"></sp-icon-arrow500>
+                                <sp-icon-arrow500 slot="icon"
+                                    style="margin-left: 0.5rem; margin-right: 0"></sp-icon-arrow500>
                             </sp-button>
                         </div>
                     </div>
                     <div class="plugin-menu" id="editor-menu">
-                        <div class="plugin-menu-section plugin-flex--no-grow" style="display: none;"> 
+                        <div class="plugin-menu-section plugin-flex--no-grow" style="display: none;">
                             <!-- LEGACY FILTER TOGGLES - KEEPIGN THIS IN CASE I WANT TO REVERT-->
                             <!--
                             <h4 class="plugin-label">Editor Scope</h4>
@@ -112,17 +132,22 @@
                             <small class="plugin-switch-note">All unchecked = target everything</small>
                             -->
                         </div>
-                        <div class="plugin-menu-section plugin-flex--no-grow"> 
-                            <h4 class="plugin-label">Restrict Edits to:</h4>    
+                        <div class="plugin-menu-section plugin-flex--no-grow" style="min-width: 350px">
+                            <h4 class="plugin-label">Restrict Edits to:</h4>
                             <div class="plugin-filters">
                                 <div class="plugin-filter-cluster">
                                     <sp-field-label for="vertical">
                                         These sequences:
                                     </sp-field-label>
                                     <sp-tags id="stateFilters" class="plugin-filters plugin-state-filters">
-                                        <sp-tag class="plugin-tag plugin-tag--state" data-type="state" data-name="intro" data-active="false" data-filter="intro">Introduction</sp-tag>
-                                        <sp-tag class="plugin-tag plugin-tag--state" data-type="state" data-name="expanded" data-active="false" data-filter="expanded">Expanded</sp-tag>
-                                        <sp-tag class="plugin-tag plugin-tag--state" data-type="state" data-name="collapsed" data-active="false" data-filter="collapsed">Collapsed</sp-tag>
+                                        <sp-tag class="plugin-tag plugin-tag--state" data-type="state" data-name="intro"
+                                            data-active="false" data-filter="intro">Introduction</sp-tag>
+                                        <sp-tag class="plugin-tag plugin-tag--state" data-type="state"
+                                            data-name="expanded" data-active="false"
+                                            data-filter="expanded">Expanded</sp-tag>
+                                        <sp-tag class="plugin-tag plugin-tag--state" data-type="state"
+                                            data-name="collapsed" data-active="false"
+                                            data-filter="collapsed">Collapsed</sp-tag>
                                     </sp-tags>
                                 </div>
                                 <div class="plugin-filter-cluster">
@@ -130,21 +155,34 @@
                                         For these devices:
                                     </sp-field-label>
                                     <sp-tags id="deviceFilters" class="plugin-filters plugin-device-filters">
-                                        <sp-tag class="plugin-tag plugin-tag--device" data-type="device" data-name="desktop" data-active="false" data-filter="dt"><sp-icon-device-desktop slot="icon" size="s"></sp-icon-device-desktop>Desktop</sp-tag>
-                                        <sp-tag class="plugin-tag plugin-tag--device" data-type="device" data-name="mobile" data-active="false" data-filter="mb"><sp-icon-device-phone slot="icon" size="s"></sp-icon-device-phone>Mobile</sp-tag>
+                                        <sp-tag class="plugin-tag plugin-tag--device" data-type="device"
+                                            data-name="desktop" data-active="false"
+                                            data-filter="dt"><sp-icon-device-desktop slot="icon"
+                                                size="s"></sp-icon-device-desktop>Desktop</sp-tag>
+                                        <sp-tag class="plugin-tag plugin-tag--device" data-type="device"
+                                            data-name="mobile" data-active="false"
+                                            data-filter="mb"><sp-icon-device-phone slot="icon"
+                                                size="s"></sp-icon-device-phone>Mobile</sp-tag>
                                     </sp-tags>
                                 </div>
-                                <small id="filterNote" class="plugin-filter-note">Edits are currently unrestricted</small>
+                                <small id="filterNote" class="plugin-filter-note">Edits are currently
+                                    unrestricted</small>
                             </div>
                         </div>
-                        <div class="plugin-menu-section">
-                            <div class="plugin-control-cluster">                                
-                                <h4 class="plugin-label">Layer Selection Shortcuts</h4>
-                                <sp-button-group>
-                                    <sp-button variant="secondary" treatment="outline" id="btnSelect">
+                        <div class="plugin-menu-section" style="min-width: 250px">
+                            <div class="plugin-control-cluster">
+                                <h4 class="plugin-label" style="margin-bottom: 0.5rem">Layer Selection Shortcuts</h4>
+
+                                <sp-button-group style="display: flex; align-items: center; align-content: center;">
+                                    <!-- <sp-switch class=" autolink-toggle" style="margin-right: 2rem"
+                                    id="chkAutoLink">Auto
+                                    Link</sp-switch> -->
+                                    <sp-action-button id="btnAutoLink" toggles emphasized>Auto Link
+                                        Disabled</sp-action-button>
+                                    <sp-action-button emphasized variant="secondary" treatment="outline" id="btnSelect">
                                         <sp-icon-layers slot="icon"></sp-icon-layers>
                                         Select Layers by Name
-                                    </sp-button>
+                                    </sp-action-button>
                                     <!-- <sp-button variant="secondary" treatment="outline" id="btnLink">
                                         <sp-icon-link slot="icon"></sp-icon-link>
                                         Link Layer by Name
@@ -155,67 +193,78 @@
                                     </sp-button> -->
                                 </sp-button-group>
                             </div>
-                            <div class="plugin-control-cluster">                              
-                                <h4 class="plugin-label">Asset Action</h4>
+                        </div>
+                        <div class="plugin-menu-section">
+                            <div class="plugin-control-cluster">
+                                <h4 class="plugin-label" style="margin-bottom: 0.5rem">Asset Action</h4>
                                 <sp-button-group>
-                                    <sp-button variant="secondary" treatment="outline" id="btnDuplicate">
+                                    <sp-action-button emphasized variant="secondary" treatment="outline"
+                                        id="btnDuplicate">
                                         <sp-icon-duplicate slot="icon"></sp-icon-duplicate>
                                         Propagate Asset(s)
-                                    </sp-button>    
-                                    <sp-button variant="secondary" treatment="outline" id="btnMissing">
+                                    </sp-action-button>
+                                    <sp-action-button emphasized variant="secondary" treatment="outline"
+                                        id="btnMissing">
                                         <sp-icon-wrench slot="icon"></sp-icon-wrench>
                                         Fill Missing Asset(s)
-                                    </sp-button>
+                                    </sp-action-button>
                                     <!-- <sp-button variant="secondary" treatment="outline" id="btnDelete">
-                                        <sp-icon-delete slot="icon"></sp-icon-delete>
-                                        Purge Asset(s)
-                                    </sp-button> -->
+                                    <sp-icon-delete slot="icon"></sp-icon-delete>
+                                    Purge Asset(s)
+                                </sp-button> -->
                                     <!---TBD - WILL SEARCH FOR MATCHING LAYER NAMES THAT DONT HAVE MATCHING LAYERKIND AND REPLACE THEM WITH A SHARED SMART OBJECT VERSION-->
-                                    <sp-button variant="secondary" treatment="outline" id="btnFixSmart">
+                                    <sp-action-button emphasized variant="secondary" treatment="outline"
+                                        id="btnFixSmart" class="--disabled">
                                         <sp-icon-education slot="icon"></sp-icon-education>
                                         Replace With Smart Object
-                                    </sp-button>
+                                    </sp-action-button>
                                     <!---TBD - WILL CREATE NEW SMART OBJECT VIA COPY OF ANY SMART OBJECT WITH LINKED SIBLINGS IN A GIVEN ARTBOARD-->
-                                    <sp-button variant="secondary" treatment="outline" id="btnFixDuplicate">
+                                    <sp-action-button emphasized variant="secondary" treatment="outline"
+                                        id="btnFixDuplicate" class="--disabled">
                                         <sp-icon-wrench slot="icon"></sp-icon-wrench>
                                         Fix Duplicate Smart Objects
-                                    </sp-button>
+                                    </sp-action-button>
                                 </sp-button-group>
                             </div>
-                            <div class="plugin-control-cluster">                              
-                                <h4 class="plugin-label">Artboard Actions --- TBD</h4>
+                        </div>
+                        <div class="plugin-menu-section">
+                            <div class="plugin-control-cluster --disabled">
+                                <h4 class="plugin-label" style="margin-bottom: 0.5rem">Artboard Actions --- TBD</h4>
                                 <sp-button-group>
-                                    <sp-button variant="secondary" treatment="outline" id="btnCloneNext">
+                                    <sp-action-button emphasized variant="secondary" treatment="outline"
+                                        id="btnCloneNext">
                                         <sp-icon-add slot="icon"></sp-icon-add>
                                         Clone to Next Artboard
-                                    </sp-button>    
-                                    <sp-button variant="secondary" treatment="outline" id="btnClonePrev">
+                                    </sp-action-button>
+                                    <sp-action-button emphasized variant="secondary" treatment="outline"
+                                        id="btnClonePrev">
                                         <sp-icon-add slot="icon"></sp-icon-add>
                                         Clone to Previous Artboard
-                                    </sp-button>
-                                    <sp-button variant="secondary" treatment="outline" id="btnRemoveSelected">
+                                    </sp-action-button>
+                                    <sp-action-button emphasized variant="secondary" treatment="outline"
+                                        id="btnRemoveSelected">
                                         <sp-icon-add slot="icon"></sp-icon-add>
                                         Remove Selected and Reorder
-                                    </sp-button>
+                                    </sp-action-button>
                                 </sp-button-group>
                             </div>
                         </div>
                     </div>
                     <div class="plugin-menu" id="production-menu">
                         <div class="plugin-menu-section">
-                            <div class="plugin-menu" id="production-menu">                            
-                                <div class="plugin-control-cluster">                              
+                            <div class="plugin-menu" id="production-menu">
+                                <div class="plugin-control-cluster">
                                     <h4 class="plugin-label">Prepare For Production</h4>
                                     <sp-button-group>
                                         <sp-button variant="secondary" treatment="outline" id="btnDuplicate">
                                             Increment Sequence
-                                        </sp-button>    
+                                        </sp-button>
                                         <sp-button variant="secondary" treatment="outline" id="btnMissing">
                                             Decrement Sequence
                                         </sp-button>
                                         <sp-button variant="secondary" treatment="outline" id="btnFixSmart">
                                             Delete and Reorder
-                                        </sp-button>                                        
+                                        </sp-button>
                                         <sp-button variant="secondary" treatment="outline" id="btnFixSmart">
                                             Insert and Reorder
                                         </sp-button>
@@ -224,7 +273,7 @@
                             </div>
                         </div>
                     </div>
-                </div>                
+                </div>
             </div>
             <sp-action-bar id="action-bar" class="plugin-action-bar selection-same-groups">
                 <p id="feedback" class="plugin-action-bar-feedback">Loading...</p>
@@ -232,19 +281,19 @@
                     <sp-icon-layers slot="icon"></sp-icon-layers>
                     Select All Layers ${Name}
                 </sp-action-button> -->
-                <sp-action-button slot="buttons" id="btnLink" label="Link">                    
+                <sp-action-button slot="buttons" id="btnLink" label="Link">
                     <sp-icon-link slot="icon"></sp-icon-link>
                     Link
                 </sp-action-button>
-                <sp-action-button slot="buttons" id="btnUnlink" label="Unlink">                    
+                <sp-action-button slot="buttons" id="btnUnlink" label="Unlink">
                     <sp-icon-unlink slot="icon"></sp-icon-unlink>
                     Unlink
                 </sp-action-button>
-                <sp-action-button slot="buttons" id="btnScale" label="Scale">                    
+                <sp-action-button slot="buttons" id="btnScale" label="Scale">
                     <sp-icon-maximize slot="icon"></sp-icon-maximize>
                     Scale
                 </sp-action-button>
-                <sp-action-button slot="buttons" id="btnRotate" label="Rotate">                 
+                <sp-action-button slot="buttons" id="btnRotate" label="Rotate">
                     <sp-icon-rotate-c-w slot="icon"></sp-icon-rotate-c-w>
                     Rotate
                 </sp-action-button>
@@ -253,9 +302,8 @@
                     Delete
                 </sp-action-button>
             </sp-action-bar>
-        </div>     
+        </div>
     </sp-theme>
 </body>
 
 </html>
-
