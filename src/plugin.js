@@ -87,33 +87,36 @@ const Plugin = (() => {
         //const handleStateChange = (params = {panel: null, newState: null}) => {
         if (!newState) return;
         newState.type === 'creative' ? state[newState.type] = newState : state.sections[newState.type] = newState;
-        // console.log('handleStateChange', state);
+        console.log('handleStateChange', state);
         setHeaderText(generateTitleText());
     }
 
     const { nav } = state.sections;
 
-    function setActiveMenu(event) {
+    const setActiveMenu = async (event) => {
         ///note: these are shallow changes so no spread to copy needed for now. May be needed layer if currentMode becomes a bit more comples in terms of the stuff i want
         //to store in it. 
         state.currentMode = event.target.value;
         nav.targetElement.setAttribute(nav.activeAttribute, state.currentMode);
-        setHeaderText(generateTitleText());
+        // setHeaderText(generateTitleText());
+        logger.log('setActiveMenu', state);
+        await Editor.setEditorEnabled({ enabled: state.currentMode === 'editor' ? true : false });
     }
 
 
-    async function applyTheme() {
+    const applyTheme = async () => {
         const themeValue = await getPSTheme();
         document.getElementById('theme').setAttribute("color", themeValue);
         return themeValue;
     }
 
-    async function loadPluginState() {
+    const loadPluginState = async () => {
         const manifest = await loadManifest();
         return manifest;
     }
 
-    function documentChangeHandler(eventType, descriptor) {
+
+    const documentChangeHandler = (eventType, descriptor) => {
         //logger.debug('documentChangeHandler', eventType, descriptor);
         if (eventType === "select") {
             const targetRef = descriptor._target?.[0]?._ref;
@@ -121,16 +124,19 @@ const Plugin = (() => {
                 return;
             }
         }
-        setHeaderText(generateTitleText());
-        logger.debug(`Active document changed: ${app.activeDocument.name}`);
+        if (app.activeDocument?.name) {
+            logger.debug(`Active document changed: ${app.activeDocument.name}`);
+            setHeaderText(generateTitleText());
+            // Builder.initHistory(app.activeDocument);
+        }
     }
 
-    function watchActiveDocumentChange() {
+    const watchActiveDocumentChange = () => {
         const events = ["select", "open", "close"];
         action.addNotificationListener(events.map(ev => ({ event: ev })), documentChangeHandler);
     }
 
-    function generateTitleText() {
+    const generateTitleText = () => {
         let sectionTitle = '';
         switch (state.currentMode) {
             case 'build':
@@ -149,16 +155,16 @@ const Plugin = (() => {
         return `${sectionTitle}`;
     }
 
-    function getBuildStepTitle() {
-        logger.debug('getBuildStepTitle', state.sections.builder.currentStep);
-        const stepNumber = state.sections.builder.currentStep;
+    const getBuildStepTitle = () => {
+        logger.debug('getBuildStepTitle', state.sections.builder?.currentStep);
+        const stepNumber = state.sections.builder?.currentStep ? state.sections.builder.currentStep : 1;
         return `<span style="font-weight: bold">${capitalizeFirstLetter(state.format)}</span>: Step ${stepNumber + 1}`;//of ${state.sections.builder.buildSteps.length}`;
     }
 
-    function setHeaderText(text) {
-        state.sections.header.titleText = text;
+    const setHeaderText = (text) => {
+        // state.sections.header.titleText = text;
         state.sections.header.element.innerHTML = text;
-        return state.sections.header.element;
+        //return state.sections.header.element;
     }
 
 
@@ -176,18 +182,18 @@ const Plugin = (() => {
 
         //Initialize Sections
         try {
-            const builder = await Builder.init(handleStateChange, state.creative);
-            console.log('builder initialized');
-            console.log(builder);
+            const builder = await Builder.init(handleStateChange, state.creative, state.currentMode);
+            logger.debug('builder initialized');
+            logger.debug(builder);
             state.sections.builder = { ...builder };
-            const editor = await Editor.init(handleStateChange, state.creative);
-            console.log('editor initialized');
-            console.log(editor);
+            ///editor doesn't need creative state at the moment. 
+            const editor = await Editor.init(handleStateChange, null, state.currentMode);
+            logger.debug('editor initialized');
+            logger.debug(editor);
             state.sections.editor = { ...editor };
-
             setHeaderText(generateTitleText());
         } catch (error) {
-            console.error('Error initializing sections', error);
+            logger.error('Error initializing sections', error);
         }
         //Assign Event Listeners
         nav.element.addEventListener('change', setActiveMenu);
@@ -198,7 +204,7 @@ const Plugin = (() => {
             logger.error('Error watching active document change', error);
         }
 
-        console.log("Plugin initialized", state);
+        logger.debug("Plugin initialized", state);
         //mode === 'DEBUG' && await clearAllSnapshots();
     }
 

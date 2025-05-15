@@ -43,7 +43,7 @@ function findValidGroups(potentialGroups, sourceContainer, nameFilters = []) {
         const isNotSource = sourceContainer === null || group.id !== sourceContainer.id;
         let matchesFilter = false;
         if (Array.isArray(nameFilters)) {
-            console.log("(findAllGroups) Testing array:", nameFilters, 'against', group.name);
+            // console.log("(findAllGroups) Testing array:", nameFilters, 'against', group.name);
             ////legacy search using array of strings.
             ////this will eventually need AND/OR logic to handle multiple filters
             matchesFilter = (
@@ -57,7 +57,7 @@ function findValidGroups(potentialGroups, sourceContainer, nameFilters = []) {
         } else {
             ////Updated version testing a regex expression. Will eventually transition everything to this but i don't want
             ////to break a bunch of shit in the meantime. 
-            console.log("(findAllGroups) Testing regex:", nameFilters, 'against', group.name);
+            // console.log("(findAllGroups) Testing regex:", nameFilters, 'against', group.name);
             matchesFilter = nameFilters.test(group.name);
         }
 
@@ -72,6 +72,58 @@ function findValidGroups(potentialGroups, sourceContainer, nameFilters = []) {
         // log(`(findAllGroups) Found ${acc.length} valid groups.`);
         return acc;
     }, []);
+}
+
+/**
+ * Walks a layer tree once, collecting:
+ *   • groups that pass the filter  → result.valid
+ *   • groups that fail the filter  → result.failed
+ *
+ * @param {Layer[]}  potentialGroups – layers to test (top level or nested)
+ * @param {?Layer}   sourceContainer – group you want to exclude from results
+ * @param {string[]|RegExp} [nameFilters=[]] – array of substrings OR a single RegExp
+ * @returns {{ valid: Layer[], failed: Layer[] }}
+ */
+function findGroupsWithFailures(potentialGroups, sourceContainer, nameFilters = []) {
+    const result = { valid: [], failed: [] };
+
+    (function walk(groups) {
+        groups.forEach(group => {
+            if (group.kind !== LayerKind.GROUP) return;
+
+            const isNotSource = !sourceContainer || group.id !== sourceContainer.id;
+
+            // -----------------------------
+            // Determine if group matches
+            // -----------------------------
+            let matchesFilter;
+            if (Array.isArray(nameFilters)) {
+                matchesFilter =
+                    nameFilters.length === 0 ||
+                    nameFilters.some(filter =>
+                        group.name?.includes(filter) || group.name === filter
+                    );
+            } else { // RegExp
+                matchesFilter = nameFilters.test(group.name);
+            }
+
+            // -----------------------------
+            // Push into the right bucket
+            // -----------------------------
+            if (isNotSource) {
+                if (matchesFilter) {
+                    result.valid.push(group);
+                } else {
+                    result.failed.push(group);      // ← didn’t match the filter
+                }
+            }
+
+            // Recurse into sub-groups
+            if (group.layers && isNotSource) walk(group.layers);
+        });
+    })(potentialGroups);
+
+    return result;
 }
 
 /**
@@ -480,5 +532,6 @@ export {
     getArtboardFrame,
     getGuidesForFrame,
     moveBoardAndGuide,
-    cloneGuidesForFrame
+    cloneGuidesForFrame,
+    findGroupsWithFailures
 };

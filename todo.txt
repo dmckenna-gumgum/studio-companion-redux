@@ -7,11 +7,15 @@ Prep File for Production
 Production-Ready Modal: See warning and errors requiring addressing.
 Mocks on how to plug this into Mindset + Support DCO
 Duplication of Guides.
+Format Detection onload
+Build State Detection (and state backfill) on load. 
+Can I make a better LayerComps solution that replaces artboards as the designer's primary workflow?
 
 Long Term:
 Hang Time Support
 AI Assistance for Builder
-Current File editing - localstorage to store sessions across different PSDs so you can maintain separate states without issues.
+Current File editing - localstorage to store sessions across different PSDs
+ - so you can maintain separate states without issues.
 Export Statics to PDF/Slide/Gif
 Mocks of a DCO workflow with the plugin.
 Smart Template into artboard states generation

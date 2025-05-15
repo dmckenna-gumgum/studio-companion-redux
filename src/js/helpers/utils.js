@@ -198,6 +198,7 @@ function buildScopeRegex(scopeFilters) {
 
   // ^... ensures we apply all lookaheads, and then allow any characters
   const pattern = `^${lookaheads.join('')}.*$`;
+  console.log('pattern', pattern);
   return new RegExp(pattern);
 }
 
@@ -351,6 +352,8 @@ const getSelectionViability = (layers) => {
   return !layers.some(item => item.kind === LayerKind.GROUP) && layers.every(item => item.kind !== LayerKind.GROUP)
 }
 
+const mergeUniqueById = (a1, a2) =>
+  [...new Map([...a2, ...a1].map(obj => [obj.id, obj])).values()];
 
 export {
   getEl,
@@ -370,5 +373,6 @@ export {
   pickProps,
   cartesianProduct,
   diffProxyArrays,
-  getSelectionViability
+  getSelectionViability,
+  mergeUniqueById
 };

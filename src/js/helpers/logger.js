@@ -5,49 +5,49 @@
  * @returns {*} - A plain JavaScript object/array/primitive.
  */
 function getPlainObjectSnapshot(data, visited = new WeakSet()) { // Add 'visited' parameter
-    if (typeof data !== 'object' || data === null) {
-      return data; // Return primitives or null as is
-    }
-  
-    if (data instanceof Date) {
-      return new Date(data.getTime()); // Clone dates
-    }
-  
-    // --- Circular reference detection ---
-    if (visited.has(data)) {
-      return "[Circular]"; // Or null, or a specific object, as you prefer
-    }
-    visited.add(data);
-    // --- End circular reference detection ---
-  
-    if (Array.isArray(data)) {
-      const plainArray = [];
-      for (const item of data) {
-        plainArray.push(getPlainObjectSnapshot(item, visited)); // Pass 'visited' along
-      }
-      visited.delete(data); // Clean up after processing this object's children
-      return plainArray;
-    }
-  
-    // For generic objects, create a new plain object
-    const plainObject = {};
-    for (const key in data) {
-      // Ensure it's an own property and not from the prototype chain
-      if (Object.prototype.hasOwnProperty.call(data, key)) {
-        // Check if the property itself might be problematic (e.g. some DOM properties)
-        // This check is basic; more sophisticated checks might be needed for specific complex objects
-        if (typeof data[key] === 'function' && key.startsWith('on')) {
-             plainObject[key] = '[Function EventHandler]'; // Or skip
-        } else if ((typeof Element !== 'undefined' && data[key] instanceof Element) || (typeof Window !== 'undefined' && data[key] instanceof Window)) { 
-             plainObject[key] = `[DOM Element: ${data[key].constructor.name}]`; // Or a more concise placeholder
-        } else {
-             plainObject[key] = getPlainObjectSnapshot(data[key], visited); // Pass 'visited' along
-        }
-      }
+  if (typeof data !== 'object' || data === null) {
+    return data; // Return primitives or null as is
+  }
+
+  if (data instanceof Date) {
+    return new Date(data.getTime()); // Clone dates
+  }
+
+  // --- Circular reference detection ---
+  if (visited.has(data)) {
+    return "[Circular]"; // Or null, or a specific object, as you prefer
+  }
+  visited.add(data);
+  // --- End circular reference detection ---
+
+  if (Array.isArray(data)) {
+    const plainArray = [];
+    for (const item of data) {
+      plainArray.push(getPlainObjectSnapshot(item, visited)); // Pass 'visited' along
     }
     visited.delete(data); // Clean up after processing this object's children
-    return plainObject;
+    return plainArray;
   }
+
+  // For generic objects, create a new plain object
+  const plainObject = {};
+  for (const key in data) {
+    // Ensure it's an own property and not from the prototype chain
+    if (Object.prototype.hasOwnProperty.call(data, key)) {
+      // Check if the property itself might be problematic (e.g. some DOM properties)
+      // This check is basic; more sophisticated checks might be needed for specific complex objects
+      if (typeof data[key] === 'function' && key.startsWith('on')) {
+        plainObject[key] = '[Function EventHandler]'; // Or skip
+      } else if ((typeof Element !== 'undefined' && data[key] instanceof Element) || (typeof Window !== 'undefined' && data[key] instanceof Window)) {
+        plainObject[key] = `[DOM Element: ${data[key].constructor.name}]`; // Or a more concise placeholder
+      } else {
+        plainObject[key] = getPlainObjectSnapshot(data[key], visited); // Pass 'visited' along
+      }
+    }
+  }
+  visited.delete(data); // Clean up after processing this object's children
+  return plainObject;
+}
 
 
 const LOG_LEVELS = {
@@ -77,6 +77,25 @@ export function setGlobalLogLevel(levelName) {
   }
 }
 
+// helper ──────────────────────────────────────────────────────────────
+const formatArg = arg => {
+  if (arg instanceof Error) {
+    return {
+      type: 'Error',
+      name: arg.name,
+      msg: arg.message,
+      stack: arg.stack?.split('\n').map(l => l.trim()),
+    };
+  }
+  // Safely stringify arbitrary objects (circular-safe)
+  if (arg && typeof arg === 'object') {
+    try { return JSON.parse(JSON.stringify(arg)); }
+    catch { return { unstringifiable: true, data: String(arg) }; }
+  }
+  return arg;          // primitives, functions, etc.
+};
+
+
 /**
  * Creates a new logger instance.
  * @param {object} [config={}] - Configuration for the logger.
@@ -98,8 +117,8 @@ export function createLogger(config = {}) {
     const fullPrefix = `${timestamp} ${levelString.padEnd(5)} ${prefix ? `[${prefix}]` : ''}`.trim();
     nativeConsoleMethod.apply(console, [fullPrefix, ...formatArgs(messageArgs)]);
   };
-  
-  const canLog = (level) => level >=_loggerLevel && level >= globalLogLevel;
+
+  const canLog = (level) => level >= _loggerLevel && level >= globalLogLevel;
 
   const loggerInstance = {
     /**
@@ -109,10 +128,10 @@ export function createLogger(config = {}) {
     setLogLevel(levelName) {
       const level = LOG_LEVELS[String(levelName).toUpperCase()];
       if (level) {
-       _loggerLevel = level;
-       console.log(`[Logger][${prefix}] Log level set to: ${levelName}`);
+        _loggerLevel = level;
+        console.log(`[Logger][${prefix}] Log level set to: ${levelName}`);
       } else {
-        const currentLevelName = Object.keys(LOG_LEVELS).find(key => LOG_LEVELS[key] ===_loggerLevel);
+        const currentLevelName = Object.keys(LOG_LEVELS).find(key => LOG_LEVELS[key] === _loggerLevel);
         console.warn(`[Logger][${prefix}] Unknown log level: ${levelName}. Logger level remains: ${currentLevelName}`);
       }
     },
@@ -136,21 +155,30 @@ export function createLogger(config = {}) {
         logMessage(console.warn, 'WARN\n', args);
       }
     },
-    error: (...args) => {
-      if (canLog(LOG_LEVELS.ERROR)) {
-        logMessage(console.error, 'ERROR\n', args);
-      }
+    error: (...rawArgs) => {
+      if (!canLog(LOG_LEVELS.ERROR)) return;
+
+      const time = new Date().toISOString();
+      const args = rawArgs.map(formatArg);
+
+      // 1️⃣  Human-friendly console             ───────────────────────────
+      console.groupCollapsed(
+        `%c✖ ${time} – ERROR`,
+        'color:#f44336;font-weight:bold'
+      );
+      console.error(...args);
+      console.groupEnd();
     },
     /**
      * Gets the current effective log level for this logger instance (considering global level).
      * @returns {string} The name of the current log level.
      */
     getCurrentLevelName() {
-        const effectiveLevel = Math.max(_loggerLevel, globalLogLevel);
-        return Object.keys(LOG_LEVELS).find(key => LOG_LEVELS[key] === effectiveLevel) || 'UNKNOWN';
+      const effectiveLevel = Math.max(_loggerLevel, globalLogLevel);
+      return Object.keys(LOG_LEVELS).find(key => LOG_LEVELS[key] === effectiveLevel) || 'UNKNOWN';
     }
   };
-  
+
   // Initial log to show logger is created and its effective level
   // loggerInstance.debug(`Logger created. Effective level: ${loggerInstance.getCurrentLevelName()}`);
 

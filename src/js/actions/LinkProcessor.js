@@ -1,9 +1,9 @@
 // src/js/actions/linkLayersByName.js
-import { findValidGroups, toggleHistory } from '../helpers/helpers.js';
+import { findValidGroups, toggleHistory, findGroupsWithFailures } from '../helpers/helpers.js';
 const { app, action, core } = require("photoshop");
 const { batchPlay } = action;
 
-
+let _lastLayers = [];
 /**
  * Recursively flatten a layer tree into a single array.
  * @param {Layer[]} layers
@@ -26,10 +26,11 @@ const collectAllLayers = (layers, acc = []) => {
  * @param {string[]} names
  * @returns {Layer[]}
  */
-const getLayersByName = (names, layers) => {
-    const all = collectAllLayers(layers);
+const getLayersByName = (names, artboard) => {
+    const all = collectAllLayers(artboard);
     return all.filter(layer => names.includes(layer.name));
 }
+
 
 /**
  * Unlink every layer whose name is in `deselectNames`
@@ -68,9 +69,18 @@ const processLinkLayers = async (selectNames, layers) => {
     }));
 }
 
+const UnlinkAllLayers = async (layers) => {
+    return await Promise.all(layers.map(async layer => {
+        console.log("unlinking", layer.name);
+        // layer.selected = false;
+        return await layer.unlink();
+    }));
+}
+
+
 /**
  * Link/unlink all layers by matching names.
- *
+ *-
  * 1. Unlink any layer named in `deselectLayers` that isn’t also in `selectLayers`  
  * 2. Once that finishes, link every layer named in `selectLayers`
  *
@@ -78,24 +88,33 @@ const processLinkLayers = async (selectNames, layers) => {
  * @param {Layer[]} deselectLayers – layers whose names you want unlinked
  * @returns {Promise<{ unlinked: number, linked: number }>}
  */
-const LinkByArrayOfLayers = async (selectLayers, deselectLayers, filters = null) => {
+const LinkByArrayOfLayers = async (selectLayers, deselectLayers, filters = null, clearAllLinks = false) => {
     const result = await core.executeAsModal(async (executionContext) => {
+        try {
+            console.log("Linking layers active");
+            const artboards = filters === null ? app.activeDocument.layers : await findGroupsWithFailures(app.activeDocument.layers, null, filters);
+            console.log("Possible artboards:", artboards);
+            return;
 
-        const possibleLayers = filters === null ? app.activeDocument.layers : findValidGroups(app.activeDocument.layers, null, filters);
-        console.log("Possible layers:", possibleLayers.map(l => l.name));
-        const selectNames = selectLayers.map(l => l.name);
-        const deselectNames = deselectLayers.map(l => l.name);
-        console.log("Unlinking", deselectNames, "Then Linking", selectNames);
+            const selectNames = selectLayers.map(l => l.name);
+            console.log("Linking", selectNames);
+            await toggleHistory(executionContext.hostControl, "suspend", app.activeDocument.id, selectLayers.length === 0 ? "Auto Unlink Layers" : "Auto Link Layers");
+            ///just deselect all layers
+            await UnlinkAllLayers(artboards);//processUnlinkLayers(deselectNames, selectNames, artboards);
+            //then relink all layers with the selected name(s)
+            const linkResult = await processLinkLayers(selectNames, artboards);
+            await toggleHistory(executionContext.hostControl, "resume", app.activeDocument.id);
+            // return counts for feedback   
+            const linkedCount = selectNames.length;
 
-        await toggleHistory(executionContext.hostControl, "suspend", app.activeDocument.id, selectLayers.length === 0 ? "Auto Unlink Layers" : "Auto Link Layers");
-        await processUnlinkLayers(deselectNames, selectNames, possibleLayers);
-        await processLinkLayers(selectNames, possibleLayers);
-        await toggleHistory(executionContext.hostControl, "resume", app.activeDocument.id);
-        // return counts for feedback
-        const unlinkedCount = deselectNames.filter(n => !selectNames.includes(n)).length;
-        const linkedCount = selectNames.length;
-        return { unlinked: unlinkedCount, linked: linkedCount };
+            return { success: true, message: "AutoLink completed successfully", linked: linkedCount, linkResult: linkResult };
+        } catch (error) {
+            console.error("Error cycling layer linkage:", error);
+            return { success: false, message: error.message };
+        }
     }, { "commandName": "Update Linked Layers Based on Selected Layers" });
+
+    return result;
 }
 
-export { LinkByArrayOfLayers };
+export { LinkByArrayOfLayers, UnlinkAllLayers };
