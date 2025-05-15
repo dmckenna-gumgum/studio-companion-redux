@@ -120,8 +120,8 @@ const Editor = (() => {
         return state.filterRegex;
     }
     // --- Layer Selection Handlers --- 
-    const handleLayerSelect = (event, selection = []) => {
-        const newSelection = setCurrentSelection(selection);
+    const handleLayerSelect = async (selection = []) => {
+        const newSelection = await setCurrentSelection(selection);
         toggleActionBar(newSelection);
         // toggleButtons(newSelection.viable);
     }
@@ -190,10 +190,13 @@ const Editor = (() => {
     const setEditorEnabled = async ({ enabled }) => {
         logger.info('setEditorEnabled', enabled);
         if (enabled) {
-            await state.selectListener?.setListenerEnabled(true);
+            logger.info('Toggling Select Listener On', state.selectListener);
+            const listenToggle = await state.selectListener?.setListening(true);
+            logger.info('setEditorEnabled listenToggle', listenToggle);
         } else {
+            logger.info('Toggling Select Listener Off');
             const results = await Promise.all([
-                state.selectListener?.setListenerEnabled(false),
+                state.selectListener?.setListening(false),
                 toggleAutoLinkBtn(false),
                 toggleActionBar()
             ]);
@@ -203,6 +206,7 @@ const Editor = (() => {
 
     const toggleActionBar = async (selection = null) => {
         try {
+            logger.info('toggleActionBar', selection);
             if (!selection || selection.layers.length === 0) return state.actionBar.element.removeAttribute('open');
             state.actionBar.element.setAttribute('open', true);
 
@@ -272,7 +276,9 @@ const Editor = (() => {
         state.autoLink.enabled = active;
         active ? state.autoLink.element.setAttribute('selected', '') : state.autoLink.element.removeAttribute('selected');
         active ? state.autoLink.element.textContent = 'Auto Link Enabled' : state.autoLink.element.textContent = 'Auto Link Disabled';
+        // console.log('setting autolink to', state.autoLink.enabled);
         const result = await state.selectListener.setAutoLink(state.autoLink.enabled);
+        // console.log('autolink result', result);
         return result;
     }
 
@@ -492,7 +498,12 @@ const Editor = (() => {
             registerEventListener(autoLinkEventObj);
 
             const listenerEnabled = initialMode === 'editor' ? true : false;
-            state.selectListener = SelectListener.initialize({ callback: handleLayerSelect, autoLink: state.autoLink.enabled, selectionFilters: state.scopeFilters, enableListener: listenerEnabled });
+            state.selectListener = SelectListener.initialize({
+                callback: handleLayerSelect,
+                autoLink: state.autoLink.enabled,
+                selectionFilters: state.scopeFilters,
+                enableListener: listenerEnabled
+            });
             // state.selectListener = new SelectListener({ callback: handleLayerSelect, autoLink: state.autoLink.enabled, selectionFilters: state.scopeFilters, enableListener: listenerEnabled });
             resolve(state);
         });

@@ -104,6 +104,43 @@ function proxyArraysEqual(a, b) {
   }
   return true;
 }
+
+/**
+ * Split two object-arrays into:
+ *   • onlyInA  – items whose id exists *only* in arrayA
+ *   • onlyInB  – items whose id exists *only* in arrayB
+ *   • inBoth   – items whose id exists in *both* arrays
+ *
+ * @template T
+ * @param {T[]} arrayA
+ * @param {T[]} arrayB
+ * @param {string} [idKey='id']
+ * @returns {{ onlyInA: T[], onlyInB: T[], inBoth: T[] }}
+ */
+function diffArraysByIds(arrayA = [], arrayB = [], idKey = 'id') {
+  const idsA = new Map(arrayA.map(item => [item[idKey], item])); // id → item
+  const idsB = new Map(arrayB.map(item => [item[idKey], item]));
+
+  const onlyA = [];
+  const onlyB = [];
+  const both = [];
+
+  // Walk A first so we can fill inBoth immediately
+  for (const [id, itemA] of idsA) {
+    if (idsB.has(id)) {
+      both.push(itemA);            // or push idsB.get(id) — they share the id
+      idsB.delete(id);               // mark as handled
+    } else {
+      onlyA.push(itemA);
+    }
+  }
+
+  // Anything left in idsB never appeared in A
+  onlyB.push(...idsB.values());
+
+  return { onlyA, onlyB, both };
+}
+
 // function proxyArraysEqual(a, b) {
 //     // 1) If they’re literally the same object, they’re equal
 //     console.log('literal check', a === b);    
@@ -355,6 +392,29 @@ const getSelectionViability = (layers) => {
 const mergeUniqueById = (a1, a2) =>
   [...new Map([...a2, ...a1].map(obj => [obj.id, obj])).values()];
 
+/**
+ * Returns true when two arrays contain **exactly** the same unique-id set
+ * (order doesn’t matter, duplicates are ignored).
+ *
+ * @template T
+ * @param {T[]} a
+ * @param {T[]} b
+ * @param {string} [idKey='id']  — property that holds the unique ID
+ * @returns {boolean}
+ */
+function sameIdSet(a, b, idKey = 'id') {
+  // Early exit if the simple math can already prove “not equal”
+  if (a.length !== b.length) return false;
+
+  const idsA = new Set(a.map(o => o[idKey]));
+  if (idsA.size !== a.length) throw new Error('Array A has duplicate IDs');
+
+  // Every id in B must exist in idsA, and sizes must match
+  for (const o of b) if (!idsA.has(o[idKey])) return false;
+
+  return true; // all checks passed ⇒ same id set
+}
+
 export {
   getEl,
   getEls,
@@ -374,5 +434,7 @@ export {
   cartesianProduct,
   diffProxyArrays,
   getSelectionViability,
-  mergeUniqueById
+  mergeUniqueById,
+  diffArraysByIds,
+  sameIdSet
 };

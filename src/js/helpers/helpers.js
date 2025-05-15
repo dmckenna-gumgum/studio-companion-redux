@@ -85,7 +85,7 @@ function findValidGroups(potentialGroups, sourceContainer, nameFilters = []) {
  * @returns {{ valid: Layer[], failed: Layer[] }}
  */
 function findGroupsWithFailures(potentialGroups, sourceContainer, nameFilters = []) {
-    const result = { valid: [], failed: [] };
+    const result = { validGroups: [], invalidGroups: [] };
 
     (function walk(groups) {
         groups.forEach(group => {
@@ -112,9 +112,9 @@ function findGroupsWithFailures(potentialGroups, sourceContainer, nameFilters = 
             // -----------------------------
             if (isNotSource) {
                 if (matchesFilter) {
-                    result.valid.push(group);
+                    result.validGroups.push(group);
                 } else {
-                    result.failed.push(group);      // ← didn’t match the filter
+                    result.invalidGroups.push(group);      // ← didn’t match the filter
                 }
             }
 

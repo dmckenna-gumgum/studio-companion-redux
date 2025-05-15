@@ -63,7 +63,7 @@ const Plugin = (() => {
     //which will tell it what type of creative we're working on. Then it will set mode and pull the correct
     //config schema from creativeConfigs
     const state = {
-        currentMode: 'build',
+        currentMode: 'editor',
         format: 'velocity',
         currentDocument: app.activeDocument.name,
         sections: {
@@ -87,7 +87,7 @@ const Plugin = (() => {
         //const handleStateChange = (params = {panel: null, newState: null}) => {
         if (!newState) return;
         newState.type === 'creative' ? state[newState.type] = newState : state.sections[newState.type] = newState;
-        console.log('handleStateChange', state);
+        // console.log('handleStateChange', state);
         setHeaderText(generateTitleText());
     }
 

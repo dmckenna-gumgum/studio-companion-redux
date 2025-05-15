@@ -38,18 +38,10 @@ const getLayersByName = (names, artboard) => {
  * @param {string[]} deselectNames
  * @param {string[]} selectNames
  */
-const processUnlinkLayers = async (deselectNames, selectNames, layers) => {
-    // only unlink names that aren’t also being linked
-    const namesToUnlink = deselectNames.filter(n => !selectNames.includes(n));
-    if (!namesToUnlink.length) return;
-
-    const layersToUnlink = getLayersByName(namesToUnlink, layers);
-    if (!layersToUnlink.length) return;
-    const anchorLayer = layersToUnlink[0];
-    layersToUnlink.shift()
+const processUnlinkLayers = async (unlinkNames, invalidBoards) => {
+    const layersToUnlink = invalidBoards.filter(layer => unlinkNames.includes(layer.name));
     return await Promise.all(layersToUnlink.map(async layer => {
-        console.log("unlinking", layer.name, "from", anchorLayer.name);
-        // layer.selected = false;
+        console.log("unlinking", layer.name);
         return await layer.unlink();
     }));
 }
@@ -69,11 +61,15 @@ const processLinkLayers = async (selectNames, layers) => {
     }));
 }
 
-const UnlinkAllLayers = async (layers) => {
-    return await Promise.all(layers.map(async layer => {
-        console.log("unlinking", layer.name);
+const UnlinkAllLayers = async (artboards) => {
+    console.log("Unlinking All Layers in:", artboards.map(a => a.name));
+    return await Promise.all(artboards.map(async artboard => {
+        console.log("unlinking", artboard.name);
         // layer.selected = false;
-        return await layer.unlink();
+        return artboard.layers.map(async layer => {
+            console.log("unlinking", layer.name);
+            return await layer.unlink();
+        })
     }));
 }
 
@@ -88,26 +84,39 @@ const UnlinkAllLayers = async (layers) => {
  * @param {Layer[]} deselectLayers – layers whose names you want unlinked
  * @returns {Promise<{ unlinked: number, linked: number }>}
  */
-const LinkByArrayOfLayers = async (selectLayers, deselectLayers, filters = null, clearAllLinks = false) => {
+const LinkByArrayOfLayers = async (toLink, toUnlink, toUnchange, filters = null) => {
     const result = await core.executeAsModal(async (executionContext) => {
         try {
             console.log("Linking layers active");
-            const artboards = filters === null ? app.activeDocument.layers : await findGroupsWithFailures(app.activeDocument.layers, null, filters);
-            console.log("Possible artboards:", artboards);
-            return;
+            const { validGroups, invalidGroups } = filters === null ? app.activeDocument.layers : await findGroupsWithFailures(app.activeDocument.layers, null, filters);
+            console.log("Viable artboards:", validGroups.map(g => g.name), "Invalid artboards:", invalidGroups.map(g => g.name));
 
-            const selectNames = selectLayers.map(l => l.name);
-            console.log("Linking", selectNames);
-            await toggleHistory(executionContext.hostControl, "suspend", app.activeDocument.id, selectLayers.length === 0 ? "Auto Unlink Layers" : "Auto Link Layers");
-            ///just deselect all layers
-            await UnlinkAllLayers(artboards);//processUnlinkLayers(deselectNames, selectNames, artboards);
-            //then relink all layers with the selected name(s)
-            const linkResult = await processLinkLayers(selectNames, artboards);
+
+            const namesToLink = toLink.map(l => l.name);
+            const namesToUnlink = toUnlink.map(l => l.name);
+            const namesToCheck = toUnchange.map(l => l.name);
+
+            const linkResult = { unlinked: 0, linked: 0 };
+
+            await toggleHistory(executionContext.hostControl, "suspend", app.activeDocument.id, namesToLink.length === 0 ? "Auto Unlink Layers" : "Auto Link Layers");
+
+            const results = await Promise.all([
+                //unlink all layers that are no longer selected. 
+                processUnlinkLayers(namesToUnlink, app.activeDocument.layers),
+
+                //only layers still linked are layers from prior selection events across valid and invalid artboards.
+                //so unlink any that are in invalid groups
+                processUnlinkLayers(namesToCheck, invalidGroups),
+
+                //now the only layers still linked are existing selections across valid groups
+                //so now we just need to add any new selections to the linked layers from valid groups
+                processLinkLayers(namesToLink, validGroups)
+            ]);
             await toggleHistory(executionContext.hostControl, "resume", app.activeDocument.id);
-            // return counts for feedback   
-            const linkedCount = selectNames.length;
-
-            return { success: true, message: "AutoLink completed successfully", linked: linkedCount, linkResult: linkResult };
+            // // return counts for feedback   
+            // linkResult.unlinked = results[0].length;
+            // linkResult.linked = results[2].length;
+            return { success: true, message: "AutoLink completed successfully", results: results };
         } catch (error) {
             console.error("Error cycling layer linkage:", error);
             return { success: false, message: error.message };
