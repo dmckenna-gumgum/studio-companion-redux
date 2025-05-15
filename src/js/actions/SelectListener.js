@@ -39,13 +39,13 @@ class SelectListener {
         action.removeNotificationListener([{ event: "select" }], this.selectHandler);
     }
     async setAutoLink(autoLink) {
-        console.log("Setting autoLink to", autoLink);
+        logger.debug("Setting autoLink to", autoLink);
         this.autoLink = autoLink;
         this.autoLink ? await LinkByArrayOfLayers(this.selection.layers, this._lastSelection.layers, this.selectionFilters) : await LinkByArrayOfLayers([], this.selection.layers);
     }
 
     async setSelectionFilters(filters = null) {
-        console.log("Setting selection filters to", filters);
+        logger.debug("Setting selection filters to", filters);
         this.autoLink && await LinkByArrayOfLayers([], this._lastSelection.layers, this.selectionFilters);
         this.selectionFilters = filters;
         this.autoLink ? await LinkByArrayOfLayers(this.selection.layers, this._lastSelection.layers, this.selectionFilters) : await LinkByArrayOfLayers([], this.selection.layers);
@@ -65,7 +65,7 @@ class SelectListener {
             this.callback?.(event, this.selection);
             const unlinkResult = this.autoLink && await LinkByArrayOfLayers([], this._lastSelection.layers, this.selectionFilters);
             this._lastSelection = { ...this.selection };
-            console.log("(Action Script) Unlink Result:", unlinkResult);
+            logger.debug("(Action Script) Unlink Result:", unlinkResult);
             return unlinkResult;
         } else {
             this.selection.identical = proxyArraysEqual(this.selection.layers, this._lastSelection.layers, this.selectionFilters);
@@ -81,7 +81,7 @@ class SelectListener {
                     this.callback?.(event, this.selection);
                     const linkResult = this.autoLink && await LinkByArrayOfLayers(this.selection.layers, this._lastSelection.layers, this.selectionFilters);
                     this._lastSelection = { ...this.selection };
-                    console.log("(Action Script) Link Result:", linkResult);
+                    logger.debug("(Action Script) Link Result:", linkResult);
                     return linkResult;
                 } catch (error) {
                     console.error("(Action Script) Error linking layers:", error);
