@@ -13,7 +13,7 @@
         <div class="plugin-container">
             <div class="plugin-header">
                 <div style="display: flex; align-items: center; justify-content: flex-start;">
-                    <sp-button variant="secondary" treatment="outline" class="plugin-step-button" id="btnReload"
+                    <sp-button static="secondary" treatment="outline" class="plugin-step-button" id="btnReload"
                         style="flex-direction: row-reverse;">
                         Reload
                         <sp-icon-refresh slot="icon" style="margin-left: 0.5rem; margin-right: 0"></sp-icon-refresh>
@@ -60,7 +60,7 @@
                                 completed these four boards click next and I’ll convert any remaining raster or text
                                 layers to smart objects and move to the next step.</p>
                             <div class="plugin-step-sub-ui">
-                                <sp-button variant="accent" label="Icon only" icon-only id="btnAddStep" size="xl"
+                                <sp-button static="accent" label="Icon only" icon-only id="btnAddStep" size="xl"
                                     class="plugin-sub-step-button">
                                     <svg xmlns="http://www.w3.org/2000/svg" role="img" slot="icon" height="18"
                                         viewBox="0 0 18 18" width="18"
@@ -165,7 +165,8 @@
                                                 size="s"></sp-icon-device-phone>Mobile</sp-tag>
                                     </sp-tags>
                                 </div>
-                                <small id="filterNote" class="plugin-filter-note">Edits are currently
+                                <small id="filterNote" class="plugin-filter-note plugin-filter--pillnote">Edits are
+                                    currently
                                     unrestricted</small>
                             </div>
                         </div>
@@ -179,20 +180,20 @@
                                     Link</sp-switch> -->
                                     <sp-action-button id="btnAutoLink" toggles emphasized>Auto Link
                                         Disabled</sp-action-button>
-                                    <sp-action-button emphasized variant="secondary" treatment="outline" id="btnSelect">
+                                    <sp-action-button emphasized static="secondary" treatment="outline" id="btnSelect">
                                         <sp-icon-layers slot="icon"></sp-icon-layers>
                                         Select Layers by Name
                                     </sp-action-button>
-                                    <sp-action-button emphasized variant="secondary" treatment="outline"
+                                    <sp-action-button emphasized static="secondary" treatment="outline"
                                         id="btnSelectAll">
                                         <sp-icon-layers slot="icon"></sp-icon-layers>
                                         Select All Layers
                                     </sp-action-button>
-                                    <!-- <sp-button variant="secondary" treatment="outline" id="btnLink">
+                                    <!-- <sp-button static="secondary" treatment="outline" id="btnLink">
                                         <sp-icon-link slot="icon"></sp-icon-link>
                                         Link Layer by Name
                                     </sp-button>
-                                    <sp-button variant="secondary" treatment="outline" id="btnUnlink">
+                                    <sp-button static="secondary" treatment="outline" id="btnUnlink">
                                         <sp-icon-unlink slot="icon"></sp-icon-unlink>
                                         Unlink Layer by Name
                                     </sp-button> -->
@@ -203,33 +204,32 @@
                             <div class="plugin-control-cluster">
                                 <h4 class="plugin-label" style="margin-bottom: 0.5rem">Layer Actions</h4>
                                 <sp-button-group>
-                                    <sp-action-button emphasized variant="secondary" treatment="outline"
+                                    <sp-action-button emphasized static="secondary" treatment="outline"
                                         id="btnDuplicate">
                                         <sp-icon-duplicate slot="icon"></sp-icon-duplicate>
                                         Propagate Asset(s)
                                     </sp-action-button>
-                                    <sp-action-button emphasized variant="secondary" treatment="outline"
-                                        id="btnMissing">
+                                    <sp-action-button emphasized static="secondary" treatment="outline" id="btnMissing">
                                         <sp-icon-wrench slot="icon"></sp-icon-wrench>
                                         Fill Missing Asset(s)
                                     </sp-action-button>
-                                    <sp-action-button emphasized variant="secondary" treatment="outline"
+                                    <sp-action-button emphasized static="secondary" treatment="outline"
                                         id="btnMatchStyle">
                                         <sp-icon-wrench slot="icon"></sp-icon-wrench>
                                         Match Styles By Name
                                     </sp-action-button>
-                                    <!-- <sp-button variant="secondary" treatment="outline" id="btnDelete">
+                                    <!-- <sp-button static="secondary" treatment="outline" id="btnDelete">
                                     <sp-icon-delete slot="icon"></sp-icon-delete>
                                     Purge Asset(s)
                                 </sp-button> -->
                                     <!---TBD - WILL SEARCH FOR MATCHING LAYER NAMES THAT DONT HAVE MATCHING LAYERKIND AND REPLACE THEM WITH A SHARED SMART OBJECT VERSION-->
-                                    <sp-action-button emphasized variant="secondary" treatment="outline"
-                                        id="btnFixSmart" class="--disabled">
+                                    <sp-action-button emphasized static="secondary" treatment="outline" id="btnFixSmart"
+                                        class="--disabled">
                                         <sp-icon-education slot="icon"></sp-icon-education>
                                         Replace With Smart Object
                                     </sp-action-button>
                                     <!---TBD - WILL CREATE NEW SMART OBJECT VIA COPY OF ANY SMART OBJECT WITH LINKED SIBLINGS IN A GIVEN ARTBOARD-->
-                                    <sp-action-button emphasized variant="secondary" treatment="outline"
+                                    <sp-action-button emphasized static="secondary" treatment="outline"
                                         id="btnFixDuplicate" class="--disabled">
                                         <sp-icon-wrench slot="icon"></sp-icon-wrench>
                                         Fix Duplicate Smart Objects
@@ -241,17 +241,7 @@
                             <div class="plugin-control-cluster --disabled">
                                 <h4 class="plugin-label" style="margin-bottom: 0.5rem">Artboard Actions --- TBD</h4>
                                 <sp-button-group>
-                                    <sp-action-button emphasized variant="secondary" treatment="outline"
-                                        id="btnCloneNext">
-                                        <sp-icon-add slot="icon"></sp-icon-add>
-                                        Clone to Next Artboard
-                                    </sp-action-button>
-                                    <sp-action-button emphasized variant="secondary" treatment="outline"
-                                        id="btnClonePrev">
-                                        <sp-icon-add slot="icon"></sp-icon-add>
-                                        Clone to Previous Artboard
-                                    </sp-action-button>
-                                    <sp-action-button emphasized variant="secondary" treatment="outline"
+                                    <sp-action-button emphasized static="secondary" treatment="outline"
                                         id="btnRemoveSelected">
                                         <sp-icon-add slot="icon"></sp-icon-add>
                                         Remove Selected and Reorder
@@ -266,16 +256,16 @@
                                 <div class="plugin-control-cluster --disabled">
                                     <h4 class="plugin-label">Prepare For Production</h4>
                                     <sp-button-group>
-                                        <sp-button variant="secondary" treatment="outline" id="btnDuplicate">
+                                        <sp-button static="secondary" treatment="outline" id="btnDuplicate">
                                             Increment Sequence
                                         </sp-button>
-                                        <sp-button variant="secondary" treatment="outline" id="btnMissing">
+                                        <sp-button static="secondary" treatment="outline" id="btnMissing">
                                             Decrement Sequence
                                         </sp-button>
-                                        <sp-button variant="secondary" treatment="outline" id="btnFixSmart">
+                                        <sp-button static="secondary" treatment="outline" id="btnFixSmart">
                                             Delete and Reorder
                                         </sp-button>
-                                        <sp-button variant="secondary" treatment="outline" id="btnFixSmart">
+                                        <sp-button static="secondary" treatment="outline" id="btnFixSmart">
                                             Insert and Reorder
                                         </sp-button>
                                     </sp-button-group>
@@ -313,14 +303,14 @@
                     Delete
                 </sp-action-button>
                 <sp-action-button slot="buttons" id="btnClonePrev" class="action-bar-btn --artboards"
-                    label="Clone & Decrement">
+                    label="Clone Decrement">
                     <sp-icon-add slot="icon"></sp-icon-add>
-                    Clone & Decrement
+                    Clone Decrement
                 </sp-action-button>
                 <sp-action-button slot="buttons" id="btnCloneNext" class="action-bar-btn --artboards"
-                    label="Clone & Increment">
+                    label="Clone Increment">
                     <sp-icon-add slot="icon"></sp-icon-add>
-                    Clone & Increment
+                    Clone Increment
                 </sp-action-button>
             </sp-action-bar>
         </div>

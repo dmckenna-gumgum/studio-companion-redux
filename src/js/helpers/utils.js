@@ -569,5 +569,6 @@ export {
     getSelectionViability,
     mergeUniqueById,
     diffArraysByIds,
-    sameIdSet
+    sameIdSet,
+    parsePanelName
 };

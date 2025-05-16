@@ -1,13 +1,13 @@
-// client/js/actions/selectLayersByName.js
+// client/js/actions/addBoardInSequence.js
 const { app, core, action, constants } = require('photoshop');
 const { batchPlay } = action;
 const { ElementPlacement } = constants;
 
-import { findValidGroups, toggleHistory } from '../helpers/helpers.js';
-import { buildArtBoardSearchRegex, pickProps, replaceStep } from '../helpers/utils.js';
+import { findValidGroups, toggleHistory, getArtboardFrame, moveBoardAndGuide } from '../helpers/helpers.js';
+import { buildArtBoardSearchRegex, pickProps, replaceStep, parsePanelName } from '../helpers/utils.js';
 import { createLogger } from '../helpers/logger.js';
 
-const logger = createLogger({ prefix: 'propagateToIntro', initialLevel: 'DEBUG' });
+const logger = createLogger({ prefix: 'addBoardInSequence', initialLevel: 'DEBUG' });
 
 async function centerInViewport(layers) {
     const layerIds = layers.map(layer => layer.id);
@@ -72,25 +72,26 @@ async function centerInViewport(layers) {
     await batchPlay(commands, {});
 }
 
-async function cloneAndPositionArtboard(route) {
+
+async function cloneAndPositionArtboard(filters, artboard, direction) {
     try {
         const clonedBoards = [];
         route.sequenceState.artboards = route.sequenceState.artboards.length > 0 ? await renamePreviousBoards(route) : route.sequenceState.artboards;
         ///NEW CLONE WILL ALWAYS BE STEP 1 IN THE SEQUENCE;
         const clonedBoardName = route.destinationName;
-        const newBoard = await route.sourceBoard.duplicate(route.sourceBoard, ElementPlacement.PLACEBEFORE, clonedBoardName);
-        // console.log("(Modal Action) New Board Name:", newBoard.name);
+        const newBoard = await sourceBoard.duplicate(artboard, ElementPlacement.PLACEBEFORE, clonedBoardName);
         let xOffsetPct = { _unit: "pixelsUnit", _value: route.step > 0 ? route.device === 'desktop' ? -2020 : -960 : route.device === 'desktop' ? -4200 : -2060 };
         let yOffsetPct = { _unit: "pixelsUnit", _value: route.step === 0 ? route.device === 'desktop' ? 817 : 617 : route.device === 'desktop' ? -817 : -617 };
         logger.debug(`(Modal Action) Translating ${route.device} board on ${route.step} To: ${xOffsetPct._value} ${yOffsetPct._value}`);
         newBoard.translate(xOffsetPct, yOffsetPct);
         clonedBoards.push(newBoard);
-        route.sequenceState.artboards.push({
+        const newArtboard = {
             name: clonedBoardName,
             id: newBoard.id,
             step: 0,
             board: newBoard
-        });
+        };
+        ///push into array
         try {
             await centerInViewport(clonedBoards);
         } catch (error) {
@@ -127,62 +128,172 @@ function pluck(obj, keys) {
     }, []);
 }
 
-async function addBoardInSequence(filter, artboard) {
+/**
+ * Adds a new artboard in sequence, either before (previous) or after (next) the current sequence
+ * @param {string|RegExp} filter - Filter to find matching artboards
+ * @param {Object} artboard - The selected artboard to base the sequence on
+ * @param {string} direction - Either "next" or "previous" to determine where to add the board
+ * @returns {Promise<Object>} - Result object with success status and message
+ */
+async function addBoardInSequence(filter, direction) {
+    const artboard = app.activeDocument.activeLayers[0]
+    console.log('add board in sequence', direction);
     try {
         const result = await core.executeAsModal(async (executionContext) => {
             const hostControl = executionContext.hostControl;
             const activeDoc = app.activeDocument;
 
-            const { before, number, after } = parsePanelName(artboard.name);
-            const device = before === 'intro' ? 'desktop' : before;
-            const state = after === 'panel' ? 'intro' : after;
+            // Parse the currently selected board name to determine sequence type, step number, and device
+            const { before, number, after, device: deviceWithColon } = parsePanelName(artboard.name);
 
-            if (actionRoutes.length === 0) {
-                await core.showAlert("No valid boards found.");
-                return { success: false, message: "No valid boards found.", count: 0 };
-            } else {
+            // Extract device type (desktop/mobile) and sequence type (intro/expanded/collapsed)    
+            const sourceBoard = artboard;
+            const deviceType = deviceWithColon.substring(1); // Remove the colon
+            const device = deviceType === 'dt' ? 'desktop' : 'mobile';
+            const deviceAbbr = deviceType; // dt or mb
+
+            console.log("(Modal Action) Board info: Type=${sequenceType}, Step=${number}, State=${state}, Device=${device}");
+            console.log("(Modal Action) Board info: ", sourceBoard.name, deviceType, device, deviceAbbr, before, after);
+
+            // Determine sequence type
+            const sequenceType = before; // intro, expanded, collapsed etc.
+            const state = after.replace('-panel', ''); // Remove "-panel" if present
+
+            logger.debug(`(Modal Action) Board info: Type=${sequenceType}, Step=${number}, State=${state}, Device=${device}`);
+
+
+
+            // Find all artboards in the document that match this sequence
+            const artboards = app.activeDocument.layers.filter(layer => {
                 try {
-                    await toggleHistory(hostControl, "suspend", activeDoc.id, action.name);
-                    let successfulPropagations = 0;
-                    for (const route of actionRoutes) {
+                    // Check if it's a valid artboard with the same sequence pattern
+                    const match = layer.kind === constants.LayerKind.ARTBOARD &&
+                        layer.name.startsWith(before) &&
+                        layer.name.includes(after) &&
+                        layer.name.endsWith(deviceWithColon);
+                    return match;
+                } catch (error) {
+                    return false;
+                }
+            }).sort((a, b) => {
+                // Sort by step number
+                try {
+                    const aMatch = parsePanelName(a.name);
+                    const bMatch = parsePanelName(b.name);
+                    return aMatch.number - bMatch.number;
+                } catch (error) {
+                    return 0;
+                }
+            });
+
+            if (artboards.length === 0) {
+                await core.showAlert("No matching artboards found in the sequence.");
+                return { success: false, message: "No matching artboards found in the sequence.", count: 0 };
+            }
+
+            await toggleHistory(hostControl, "suspend", activeDoc.id, `Add Board ${direction === 'previous' ? 'Before' : 'After'} Sequence`);
+
+            try {
+                let sourceBoard, newBoardName, newStepNumber;
+                let artboardsToRename = [];
+                let successfulPropagations = 0;
+
+                if (direction === 'previous') {
+                    // Clone the first artboard in the sequence
+                    sourceBoard = artboards[0];
+                    newStepNumber = 1;
+
+                    // Need to rename all existing boards to increment their step numbers
+                    artboardsToRename = [...artboards]; // Create a copy to avoid modifying while iterating
+                } else { // 'next'
+                    // Clone the last artboard in the sequence
+                    sourceBoard = artboards[artboards.length - 1];
+                    newStepNumber = artboards.length + 1;
+
+                    // No need to rename existing boards
+                    artboardsToRename = [];
+                }
+
+                // Create the name for the new board
+                newBoardName = `${before}-${newStepNumber}-${after}${deviceWithColon}`;
+                logger.debug(`Creating new board: ${newBoardName} based on ${sourceBoard.name}`);
+
+                // Clone the source board
+                const newBoard = await sourceBoard.duplicate(sourceBoard.parent, ElementPlacement.PLACEBEFORE, newBoardName);
+                successfulPropagations++;
+
+                // Position the new board
+                const sourceFrame = await getArtboardFrame(sourceBoard);
+
+                if (direction === 'previous') {
+                    // Position before first board in sequence
+                    // First, rename all existing boards to increment their step
+                    for (const existingBoard of artboardsToRename) {
                         try {
-                            // console.log(`(Modal Action) Creating a New Target Board: ${actionRoute.destinationName}`); 1
-                            const { state, boards } = await cloneAndPositionArtboard(route);
-                            state.artboards = state.artboards.sort((a, b) => a.step - b.step);
-                            logger.debug("Boards:", state.artboards);
-                            creativeState[state.device].sequences[state.name] = state;
-                            successfulPropagations += boards.length;
-                            // console.log(`(Modal Action) Completed duplication of ${sourceBoard.name} to ${targetBoard.name}.`);
+                            const { before: eBefore, number: eNumber, after: eAfter, device: eDevice } = parsePanelName(existingBoard.name);
+                            const newName = `${eBefore}-${eNumber + 1}-${eAfter}${eDevice}`;
+                            logger.debug(`Renaming board: ${existingBoard.name} to ${newName}`);
+                            existingBoard.name = newName;
                         } catch (error) {
-                            console.error(`Error converting or duplicating layers on ${sourceBoard.name}: ${error.message}`);
-                            // Potentially non-critical, continue loop
+                            logger.error(`Error renaming board ${existingBoard.name}: ${error.message}`);
                         }
                     }
-                    logger.debug("Return State:", creativeState);
-                    await toggleHistory(hostControl, "resume", activeDoc.id);
-                    let message = `Created ${successfulPropagations} New Intro Boards.`;
-                    return { success: true, message: message, payload: creativeState, count: successfulPropagations };
 
-                } catch (error) {
-                    console.error("(Modal Action) Error in normalizeAndPropagateRestStates:", error);
-                    await toggleHistory(hostControl, "resume", activeDoc.id);
-                    return { success: false, message: `Error: ${error.message || error}`, count: 0 };
+                    // Move the new board into position where the first board was
+                    const offsetX = sourceFrame.left - (await getArtboardFrame(newBoard)).left;
+                    const offsetY = sourceFrame.top - (await getArtboardFrame(newBoard)).top;
+                    await moveBoardAndGuide(newBoard, offsetX, offsetY);
+
+                    // Now move all other boards down to make space
+                    const boardHeight = sourceFrame.bottom - sourceFrame.top;
+                    const spacing = 50; // Space between boards
+
+                    for (let i = 0; i < artboardsToRename.length; i++) {
+                        // Move each board down by the height of one board + spacing
+                        await moveBoardAndGuide(artboardsToRename[i], 0, boardHeight + spacing);
+                    }
+
+                } else { // 'next'
+                    // Position after last board in sequence
+                    const lastBoard = artboards[artboards.length - 1];
+                    const lastFrame = await getArtboardFrame(lastBoard);
+
+                    // Calculate the position where the new board should be placed
+                    const boardHeight = lastFrame.bottom - lastFrame.top;
+                    const spacing = 50; // Space between boards
+
+                    const offsetX = lastFrame.left - (await getArtboardFrame(newBoard)).left;
+                    const offsetY = lastFrame.bottom - (await getArtboardFrame(newBoard)).top + spacing;
+                    await moveBoardAndGuide(newBoard, offsetX, offsetY);
                 }
+
+                // Center the view on the new board
+                await centerInViewport([newBoard]);
+
+                await toggleHistory(hostControl, "resume", activeDoc.id);
+                const message = `Successfully added a new ${sequenceType} board ${direction === 'previous' ? 'before' : 'after'} the sequence.`;
+                return { success: true, message: message, count: successfulPropagations };
+
+            } catch (error) {
+                logger.error(`Error in addBoardInSequence: ${error.message}`);
+                await toggleHistory(hostControl, "resume", activeDoc.id);
+                return { success: false, message: `Error: ${error.message || error}`, count: 0 };
             }
-        }, { "commandName": action.name });
-        // --- Process Result from Modal --- 
+        }, { "commandName": `Add Board in Sequence (${direction})` });
+
+        // Process result from modal
         if (result.success) {
             logger.debug(result);
             return result;
         } else {
             // Use the message from the modal if available, otherwise default
-            const message = result.message || "An unexpected issue occurred during selection.";
+            const message = result.message || "An unexpected issue occurred during operation.";
             await core.showAlert(message);
             return result;
         }
     } catch (error) {
-        console.error("(Action Script) Error in normalizeAndPropagateRestStates:", error);
-        await core.showAlert("An unexpected error occurred during normalizing and propagating rest states to velocity state boards. Check the console for details.");
+        logger.error("Error in addBoardInSequence:", error);
+        await core.showAlert(`An unexpected error occurred: ${error.message || error}`);
         return { success: false, message: `Error: ${error.message || error}`, count: 0 };
     }
 }

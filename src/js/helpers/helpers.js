@@ -8,6 +8,10 @@ const logger = createLogger({ prefix: 'Builder', initialLevel: 'DEBUG' });
 
 const debug = false;
 
+/**
+ * Conditionally logs a message to the console if debug mode is enabled
+ * @param {string|Object} message - The message or object to log
+ */
 function log(message) {
     if (debug) {
         console.log(message);
@@ -15,7 +19,11 @@ function log(message) {
 }
 
 /**
- * Gets the parent container based on the first selected layer - warning: this will not work if selected layers span multiple groups or if they are not in a top-level group.
+ * Gets the parent container based on the first selected layer
+ * @param {Array<Object>} selection - Array of selected Photoshop layers
+ * @returns {Object|{success: boolean, message: string, count: number}} - Parent container object or error object if layers have different parents
+ * @throws {Error} - If the selection is invalid or empty
+ * @warning Will not work if selected layers span multiple groups or are not in a top-level group
  */
 function getLayerContainer(selection) {
     const parentContainer = selection[0]?.parent;
@@ -33,7 +41,12 @@ function getLayerContainer(selection) {
 }
 
 /**
- * Recursively finds all groups in the given layer set that are not the source container and whose names contain any of the given name filters.
+ * Recursively finds all groups in the given layer set that are not the source container 
+ * and whose names contain any of the given name filters
+ * @param {Array<Object>} potentialGroups - Array of layer objects to search through
+ * @param {Object|null} sourceContainer - The source container to exclude from results
+ * @param {Array<string>} [nameFilters=[]] - Array of name filters to match against layer names
+ * @returns {Array<Object>} - Array of valid group layers matching the criteria
  */
 function findValidGroups(potentialGroups, sourceContainer, nameFilters = []) {
 
@@ -75,14 +88,11 @@ function findValidGroups(potentialGroups, sourceContainer, nameFilters = []) {
 }
 
 /**
- * Walks a layer tree once, collecting:
- *   • groups that pass the filter  → result.valid
- *   • groups that fail the filter  → result.failed
- *
- * @param {Layer[]}  potentialGroups – layers to test (top level or nested)
- * @param {?Layer}   sourceContainer – group you want to exclude from results
- * @param {string[]|RegExp} [nameFilters=[]] – array of substrings OR a single RegExp
- * @returns {{ valid: Layer[], failed: Layer[] }}
+ * Walks a layer tree once, collecting groups that match or don't match the filter criteria
+ * @param {Array<Object>} potentialGroups - Layers to test (top level or nested)
+ * @param {Object|null} sourceContainer - Group to exclude from results
+ * @param {Array<string>|RegExp} [nameFilters=[]] - Array of substrings OR a single RegExp to filter by name
+ * @returns {{validGroups: Array<Object>, invalidGroups: Array<Object>}} - Object containing arrays of valid and invalid groups
  */
 function findGroupsWithFailures(potentialGroups, sourceContainer, nameFilters = []) {
     const result = { validGroups: [], invalidGroups: [] };
@@ -127,7 +137,12 @@ function findGroupsWithFailures(potentialGroups, sourceContainer, nameFilters = 
 }
 
 /**
- * Suspends or resumes history based on the given state.
+ * Suspends or resumes Photoshop's history state tracking
+ * @param {Object} hostControl - The Photoshop host control object
+ * @param {string} state - Either "suspend" or "resume" to control history state
+ * @param {number} documentID - The ID of the active document
+ * @param {string} actionName - Name to use for the history state
+ * @returns {Promise<void>}
  */
 async function toggleHistory(hostControl, state, documentID, actionName) {
     if (state === "suspend") {
@@ -140,8 +155,11 @@ async function toggleHistory(hostControl, state, documentID, actionName) {
 }
 
 /**
- * Checks if a given target container already contains any of the source layer names.
- * If so, increments the skipped targets counter.
+ * Checks if a target container already contains any of the source layer names
+ * @param {Object} targetContainer - The target layer container to check
+ * @param {Array<string>} sourceLayerNames - Array of layer names to check for
+ * @param {number} skippedTargets - Counter for skipped targets
+ * @returns {[boolean, number]} - [hasExistingLayer flag, updated skippedTargets counter]
  */
 function checkForExistingLayers(targetContainer, sourceLayerNames, skippedTargets) {
     const targetLayerNames = targetContainer.layers ? targetContainer.layers.map(l => l.name) : []; // Handle case where target might somehow have no layers array
@@ -152,7 +170,10 @@ function checkForExistingLayers(targetContainer, sourceLayerNames, skippedTarget
 }
 
 /**
- * Gets the index of a layer in the source layer stack.
+ * Gets the index of a layer in the source layer stack
+ * @param {Object} layer - The layer to find
+ * @param {Array<Object>} sourceLayers - The array of layers to search in
+ * @returns {number} - The index of the layer in the stack, or -1 if not found
  */
 function getLayerIndex(layer, sourceLayers) {
     let sourceIndex = sourceLayers.findIndex(item => item.id === layer.id);
@@ -160,7 +181,11 @@ function getLayerIndex(layer, sourceLayers) {
 }
 
 /**
- * Duplicates a layer and moves it to the bottom of the target container layer stack.
+ * Duplicates a layer and moves it to the bottom of the target container layer stack
+ * @param {Object} sourceLayer - The source layer to duplicate
+ * @param {Object} targetContainer - The target container to place the duplicated layer in
+ * @param {number} successfulPropagations - Counter for successful propagations
+ * @returns {Promise<[Object, number]>} - Promise resolving to [duplicatedLayer, updated counter]
  */
 async function duplicateAndMoveToBottom(sourceLayer, targetContainer, successfulPropagations) {
     const duplicatedLayer = await sourceLayer.duplicate(targetContainer, ElementPlacement.PLACEINSIDE);
@@ -174,7 +199,10 @@ async function duplicateAndMoveToBottom(sourceLayer, targetContainer, successful
 }
 
 /**
- * Gets the relative position of a layer to its container.
+ * Gets the relative position of a layer to its container
+ * @param {Object} sourceLayer - The source layer to get position for
+ * @param {Object} sourceContainer - The container to calculate position relative to
+ * @returns {{relativeX: number, relativeY: number}} - Object with relative X and Y coordinates
  */
 function getRelativePosition(sourceLayer, sourceContainer) {
     const sourceLayerBounds = sourceLayer.bounds;
@@ -186,7 +214,11 @@ function getRelativePosition(sourceLayer, sourceContainer) {
 }
 
 /**
- * Matches the relative position of a duplicated layer to its source container.
+ * Matches the relative position of a duplicated layer to its source container
+ * @param {Object} duplicatedLayer - The duplicated layer to position
+ * @param {{relativeX: number, relativeY: number}} relativePositions - Object with relative X and Y coordinates
+ * @param {Object} targetContainer - The target container to position relative to
+ * @returns {Promise<Object>} - Promise resolving to the positioned duplicated layer
  */
 async function matchRelativePosition(duplicatedLayer, relativePositions, targetContainer) {
     const targetContainerBounds = targetContainer.bounds;
@@ -338,6 +370,11 @@ async function showInputDialog(label, title, defaultValue = '', okText = 'OK', c
     });
 }
 
+/**
+ * Creates a batch command array to convert a layer to a smart object
+ * @param {Object} layer - The layer to convert to a smart object
+ * @returns {Array<Object>} - Array of batch commands to execute for conversion
+ */
 function convertToSmartObject(layer) {
     if (layer.kind === LayerKind.NORMAL || layer.kind === LayerKind.TEXT) {
         const commands = [];
@@ -366,6 +403,13 @@ function convertToSmartObject(layer) {
 }
 
 
+/**
+ * Creates a batch command array to rasterize a layer
+ * @param {Object} layer - The layer to rasterize
+ * @param {boolean} [rasterizeText=true] - Whether to rasterize text layers
+ * @param {boolean} [rasterizeLayerStyles=false] - Whether to rasterize layer styles
+ * @returns {Array<Object>} - Array of batch commands to execute for rasterization
+ */
 function rasterizeLayer(layer, rasterizeText = true, rasterizeLayerStyles = false) {
     const layerRef = { _ref: "layer", _id: layer.id };
 
@@ -404,6 +448,12 @@ function rasterizeLayer(layer, rasterizeText = true, rasterizeLayerStyles = fals
     //return rasterizeResult;
 }
 
+/**
+ * Duplicates all layers from a source board to multiple target boards
+ * @param {Object} sourceBoard - The source artboard containing layers to duplicate
+ * @param {Array<Object>} targetBoards - Array of target artboards to duplicate layers to
+ * @returns {Promise<Array<Object>>} - Promise resolving to array of duplicated layers
+ */
 async function duplicateBoardToBoard(sourceBoard, targetBoards) {
     const layerDuplicates = [];
     const sourceLayers = sourceBoard.layers;
@@ -431,6 +481,13 @@ async function duplicateBoardToBoard(sourceBoard, targetBoards) {
     }
 }
 
+/**
+ * Converts all applicable layers in an artboard to smart objects
+ * @param {Object} artboard - The artboard containing layers to convert
+ * @param {boolean} rasterizeText - Whether to rasterize text layers before conversion
+ * @param {boolean} rasterizeLayerStyles - Whether to rasterize layer styles before conversion
+ * @returns {Promise<Object>} - Promise resolving to the result of the batch operation
+ */
 async function convertAllLayersToSmartObjects(artboard, rasterizeText, rasterizeLayerStyles) {
     // console.log("(convertAllLayersToSmartObjects) Converting layers to smart objects:", artboard.layers);
     const commands = [];
@@ -457,6 +514,11 @@ async function convertAllLayersToSmartObjects(artboard, rasterizeText, rasterize
     return results;
 }
 
+/**
+ * Gets the frame rectangle of an artboard layer
+ * @param {Object} artboardLayer - The artboard layer to get the frame for
+ * @returns {Promise<{left: number, top: number, right: number, bottom: number}>} - Promise resolving to the artboard rectangle
+ */
 async function getArtboardFrame(artboardLayer) {
     const [{ artboard: { artboardRect } }] = await batchPlay(
         [{
@@ -471,6 +533,11 @@ async function getArtboardFrame(artboardLayer) {
     return artboardRect;  // { left, top, right, bottom }
 }
 
+/**
+ * Gets all guides that intersect with the given frame
+ * @param {{left: number, top: number, right: number, bottom: number}} frame - Frame rectangle to check guides against
+ * @returns {Promise<Array<Object>>} - Promise resolving to array of guides within the frame
+ */
 async function getGuidesForFrame(frame) {
     return app.activeDocument.guides.filter(guide => {
         // ensure numeric
@@ -483,6 +550,14 @@ async function getGuidesForFrame(frame) {
     });
 }
 
+/**
+ * Moves an artboard and its associated guides by the specified amount
+ * @param {Object} artboard - The artboard to move
+ * @param {number} x - The horizontal translation amount
+ * @param {number} y - The vertical translation amount
+ * @param {Array<Object>|null} [specificGuides=null] - Optional specific guides to move instead of detecting
+ * @returns {Promise<Object>} - Promise resolving to the moved artboard
+ */
 async function moveBoardAndGuide(artboard, x, y, specificGuides = null) {
     try {
         console.log("(moveBoardAndGuide) Using External Guide Target:", specificGuides);
@@ -504,6 +579,11 @@ async function moveBoardAndGuide(artboard, x, y, specificGuides = null) {
     }
 }
 
+/**
+ * Clones all guides that intersect with the given frame
+ * @param {{left: number, top: number, right: number, bottom: number}} frame - Frame rectangle to check guides against
+ * @returns {Promise<Array<Object>>} - Promise resolving to array of cloned guides
+ */
 async function cloneGuidesForFrame(frame) {
     const guides = await getGuidesForFrame(frame);
     const clonedGuides = guides.map(guide => {
@@ -515,10 +595,10 @@ async function cloneGuidesForFrame(frame) {
 }
 
 /**
- * Recursively flatten a layer tree into a single array.
- * @param {Layer[]} layers
- * @param {Layer[]} [acc=[]]
- * @returns {Layer[]}
+ * Recursively flatten a layer tree into a single array
+ * @param {Array<Object>} layers - Array of layers to flatten
+ * @param {Array<Object>} [acc=[]] - Accumulator array for recursion
+ * @returns {Array<Object>} - Flattened array of all layers
  */
 const collectAllLayers = (layers, acc = []) => {
     layers.forEach(layer => {
@@ -531,10 +611,10 @@ const collectAllLayers = (layers, acc = []) => {
 }
 
 /**
- * Given an array of names, return every Layer in the document
- * whose .name matches one of them.
- * @param {string[]} names
- * @returns {Layer[]}
+ * Finds all layers in an artboard that match any of the given names
+ * @param {Array<string>} names - Array of layer names to find
+ * @param {Object} artboard - The artboard to search in
+ * @returns {Array<Object>} - Array of layers matching the names
  */
 const getLayersByName = (names, artboard) => {
     const all = collectAllLayers(artboard);

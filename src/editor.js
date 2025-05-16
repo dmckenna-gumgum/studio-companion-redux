@@ -11,13 +11,15 @@ import { createLogger } from './js/helpers/logger.js';
 import { linkSelectedLayers } from './js/actions/linkSelectedLayers.js';
 import { matchStylesByName } from './js/actions/matchStylesByName.js';
 import { addBoardInSequence } from './js/actions/addBoardInSequence.js';
+import { findValidGroups } from './js/helpers/helpers.js';
+import { collectAllLayers } from './js/helpers/helpers.js';
 
 const { core, constants } = require("photoshop");
 const { LayerKind } = constants;
 let _onUpdateCallback = null;
 
 const Editor = (() => {
-    const logger = createLogger({ prefix: 'Editor', initialLevel: 'INFO' });
+    const logger = createLogger({ prefix: 'Editor', initialLevel: 'DEBUG' });
 
     const _eventListeners = [];
     const registerEventListener = (eventConfig = {}) => {
@@ -99,13 +101,6 @@ const Editor = (() => {
         }
     }
 
-    const createTag = (type, name) => {
-        const tag = document.createElement('sp-tag');
-        tag.classList.add('plugin-tag', `plugin-tag--${type}`);
-        tag.textContent = capitalizeFirstLetter(name);
-        return tag;
-    }
-
     // --- UI Feedback Handlers --- 
     const toggleButtons = (enable = getCurrentSelection().viable) => {
         const buttonState = getButtonState();
@@ -176,29 +171,33 @@ const Editor = (() => {
         }
     }
 
+    const selectAllLayers = async () => {
+        const selection = findValidGroups(app.activeDocument, null, filters);
+        const allLayers = collectAllLayers(selection);
+        allLayers.forEach(layer => layer.selected = true);
+        return { name: 'selectAllLayers', success: true, message: 'All layers selected successfully' }
+    }
+
     // --- Editor Event Handlers --- 
-    const handleEditorAction = (event, behavior) => {
-        logger.debug('handleEditorAction', event, behavior);
-        // console.log(`executing ${behavior.name} action...`);
-        setTimeout(async () => {
-            try {
-                logger.debug(`Starting awaited ${behavior.name} action...`);
-                const validTypes = getFilters();
-                logger.debug('validTypes', validTypes)
-                const result = await behavior.action(validTypes, ...behavior.options);
-                logger.debug(`DEBUG: Result from ${behavior.name} action:`, result);
-                restoreFocus();
-                behavior.callback?.(result.layers);
-                if (!result.success && result.message) {
-                    // await core.showAlert(result.message);
-                }
-            } catch (err) {
-                logger.error(`DEBUG: Error calling ${behavior.name} action:`, err);
-                const errorMessage = err.message || err.toString() || "Unknown error.";
-                //state.actionBar.feedbackElement.textContent = `Error: ${errorMessage}`;
-                //await core.showAlert(`Error ${behavior.name}: ${errorMessage}`);
+    const handleEditorAction = async (event, behavior) => {
+        console.debug('handleEditorAction', event, behavior);
+        try {
+            console.debug(`Starting awaited ${behavior.name} action...`);
+            const validTypes = getFilters();
+            console.debug('validTypes', validTypes)
+            const result = await behavior.action(validTypes, ...behavior.options);
+            console.debug(`DEBUG: Result from ${behavior.name} action:`, result);
+            restoreFocus();
+            behavior.callback?.(result.layers);
+            if (!result.success && result.message) {
+                // await core.showAlert(result.message);
             }
-        }, 1);
+        } catch (err) {
+            console.error(`DEBUG: Error calling ${behavior.name} action:`, err);
+            const errorMessage = err.message || err.toString() || "Unknown error.";
+            //state.actionBar.feedbackElement.textContent = `Error: ${errorMessage}`;
+            //await core.showAlert(`Error ${behavior.name}: ${errorMessage}`);
+        }
     }
 
     const handleFilterChange = (event, behavior) => {
@@ -361,7 +360,7 @@ const Editor = (() => {
                 action: addBoardInSequence,
                 buttonId: 'btnCloneNext',
                 buttonElement: document.querySelector('#btnCloneNext'),
-                options: [],
+                options: ['next'],
                 callback: null
             },
             {
@@ -370,7 +369,16 @@ const Editor = (() => {
                 action: addBoardInSequence,
                 buttonId: 'btnClonePrev',
                 buttonElement: document.querySelector('#btnClonePrev'),
-                options: [],
+                options: ['prev'],
+                callback: null
+            },
+            {
+                description: "Select All Layers",
+                name: "SelectAll",
+                action: selectAllLayers,
+                buttonId: 'btnSelectAll',
+                buttonElement: document.querySelector('#btnSelectAll'),
+                options: ['next'],
                 callback: null
             }
         ],
