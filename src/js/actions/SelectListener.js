@@ -11,6 +11,7 @@ const SelectListener = (() => {
     const _state = {
         selection: {
             layers: [],
+            type: 'layer',
             viable: true,
             identical: true,
             sameGroup: true,
@@ -29,7 +30,8 @@ const SelectListener = (() => {
         selectionPoll: null,
         selectionFilters: null,
         listener: null,
-        callback: null
+        callback: null,
+        pollingRate: 100
     };
 
     // Create state handler for proxy
@@ -77,9 +79,9 @@ const SelectListener = (() => {
         state.selection.layers = app.activeDocument.activeLayers;
         state.selection.identical = state.lastSelection.layers.length > 0 ? sameIdSet(state.selection.layers, state.lastSelection.layers) : true;
         state.selection.identical === true ?
-            state.selectionPoll = setTimeout(startSelectionPoll, 500) :
+            state.selectionPoll = setTimeout(startSelectionPoll, state.pollingRate) :
             ///if they're not identical, process the selection
-            state.selectionPoll = setTimeout(() => { selectionProcessor('select', 'pollingCycle') }, 500);
+            state.selectionPoll = setTimeout(() => { selectionProcessor('select', 'pollingCycle') }, state.pollingRate);
     };
 
     const stopSelectionPoll = () => {
@@ -98,23 +100,23 @@ const SelectListener = (() => {
         }
     };
 
-    const startAutoLink = () => {
+    const startAutoLink = async () => {
         if (state.autoLink !== true) {
             stopSelectionPoll();
             state.autoLink = true;
             state.selection.identical = false;
-            state.enabled && selectionProcessor('select', 'autolinkEnabled');
-            return true;
+            state.enabled && await selectionProcessor('select', 'autolinkEnabled');
+            return { success: true, message: "(SelectListener) AutoLink started successfully" };
         } else {
-            return false;
+            return { success: true, message: "(SelectListener) AutoLink was already started" };
         }
     };
 
     const stopAutoLink = async () => {
         if (state.autoLink !== false) {
             state.autoLink = false;
-            state.enabled && selectionProcessor('select', 'autolinkDisabled');
-            const unlinkResult = await UnlinkAllLayers(state.lastSelection.layers);
+            // state.enabled && await selectionProcessor('select', 'autolinkDisabled');
+            const unlinkResult = UnlinkAllLayers(state.lastSelection.layers);
             return { success: true, message: "(SelectListener) AutoLink stopped successfully", unlinkResult: unlinkResult };
         } else {
             return { success: true, message: "(SelectListener) AutoLink was already stopped" };
@@ -124,11 +126,7 @@ const SelectListener = (() => {
     const setAutoLink = (autoLink) => {
         state.selection.layers = app.activeDocument.activeLayers;
         if (autoLink !== state.autoLink) {
-            if (autoLink) {
-                return { success: startAutoLink(autoLink), message: "(SelectListener) AutoLink started successfully" };
-            } else {
-                return { success: stopAutoLink(autoLink), message: "(SelectListener) AutoLink stopped successfully" };
-            }
+            return autoLink ? startAutoLink() : stopAutoLink();
         } else {
             return { success: true, message: "(SelectListener) AutoLink state is already set to " + autoLink };
         }
@@ -150,6 +148,7 @@ const SelectListener = (() => {
         state.selection = {
             layers: [],
             viable: true,
+            type: 'layer',
             identical: false,
             sameGroup: true,
             parentGroupCount: 0
@@ -168,6 +167,7 @@ const SelectListener = (() => {
     }
 
     const handleSelectionFeedback = () => {
+
         return state.callback?.(state.selection);
     }
 
@@ -178,7 +178,9 @@ const SelectListener = (() => {
             handleDeselect();
         } else {
             try {
-                state.selection.viable = getSelectionViability(state.selection.layers);
+                const { viable, type } = getSelectionViability(state.selection.layers);
+                state.selection.viable = viable;
+                state.selection.type = type;
                 state.selection.parentGroupCount = parentGroupCount(state.selection.layers);
                 //state.selection.identical = state.lastSelection.layers.length > 0 ? sameIdSet(state.selection.layers, state.lastSelection.layers) : true;
                 handleSelectionFeedback();

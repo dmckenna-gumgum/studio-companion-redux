@@ -514,6 +514,33 @@ async function cloneGuidesForFrame(frame) {
     return clonedGuides;
 }
 
+/**
+ * Recursively flatten a layer tree into a single array.
+ * @param {Layer[]} layers
+ * @param {Layer[]} [acc=[]]
+ * @returns {Layer[]}
+ */
+const collectAllLayers = (layers, acc = []) => {
+    layers.forEach(layer => {
+        acc.push(layer);
+        if (layer.layers && layer.layers.length) {
+            collectAllLayers(layer.layers, acc);
+        }
+    });
+    return acc;
+}
+
+/**
+ * Given an array of names, return every Layer in the document
+ * whose .name matches one of them.
+ * @param {string[]} names
+ * @returns {Layer[]}
+ */
+const getLayersByName = (names, artboard) => {
+    const all = collectAllLayers(artboard);
+    return all.filter(layer => names.includes(layer.name));
+}
+
 export {
     getLayerContainer,
     findValidGroups,
@@ -533,5 +560,7 @@ export {
     getGuidesForFrame,
     moveBoardAndGuide,
     cloneGuidesForFrame,
-    findGroupsWithFailures
+    findGroupsWithFailures,
+    collectAllLayers,
+    getLayersByName
 };

@@ -1,35 +1,41 @@
 // src/js/actions/linkLayersByName.js
-import { findValidGroups, toggleHistory, findGroupsWithFailures } from '../helpers/helpers.js';
+import { findValidGroups, toggleHistory, findGroupsWithFailures, collectAllLayers, getLayersByName } from '../helpers/helpers.js';
 const { app, action, core } = require("photoshop");
 const { batchPlay } = action;
 
-let _lastLayers = [];
-/**
- * Recursively flatten a layer tree into a single array.
- * @param {Layer[]} layers
- * @param {Layer[]} [acc=[]]
- * @returns {Layer[]}
- */
-const collectAllLayers = (layers, acc = []) => {
-    layers.forEach(layer => {
-        acc.push(layer);
-        if (layer.layers && layer.layers.length) {
-            collectAllLayers(layer.layers, acc);
+
+
+/* toyed with applying layer styles to designate linked layers but it risks overwriting designers' actual layer styles in the process.
+const applyLinkStyle = async (layers) => {
+    const commands = layers.map(layer => ({
+        _obj: "set",
+        _target: [
+            { _ref: "property", _property: "layerEffects" },
+            { _ref: "layer", _id: layer.id }
+        ],
+        to: {
+            _obj: "layerEffects",
+            scale: { _unit: "percentUnit", _value: 100 },
+            solidFill: {
+                _obj: "solidFill",
+                enabled: true,
+                present: true,
+                showInDialog: false,
+                mode: { _enum: "blendMode", _value: "colorOverlay" },
+                opacity: { _unit: "percentUnit", _value: 50 },
+                color: {
+                    _obj: "RGBColor",
+                    red: 255,
+                    green: 0,
+                    blue: 0
+                }
+            }
         }
-    });
-    return acc;
+    }));
+    console.log('layer style command: ', commands);
+    await batchPlay(commands, { synchronousExecution: false });
 }
 
-/**
- * Given an array of names, return every Layer in the document
- * whose .name matches one of them.
- * @param {string[]} names
- * @returns {Layer[]}
- */
-const getLayersByName = (names, artboard) => {
-    const all = collectAllLayers(artboard);
-    return all.filter(layer => names.includes(layer.name));
-}
 
 
 /**
@@ -57,13 +63,14 @@ const processLinkLayers = async (selectNames, validBoards) => {
     // console.log('checking for layers to link in: ', validBoards.map(g => g.name));
     const layersToLink = getLayersByName(selectNames, validBoards);
     try {
-        const linkResults = await Promise.all(layersToLink.slice(1).map(async layer => {
+        const linkResults = await Promise.all(layersToLink.map(async layer => {
             await layer.unlink(); //this shouldn't be necessary but certain filter change sequences
             //results in a situation where two of the layer instances are linked to each other separate from the rest. 
             //I'll give anyone $100 if they can figure out why.
             await layer.link(layersToLink[0]);
             return { id: layer.id, name: layer.name, artboard: layer.parent.name };
         }));
+        // await applyLinkStyle(layersToLink);
         return { linked: linkResults };
     } catch (error) {
         console.error("Error linking layers:", error);

@@ -27,7 +27,7 @@
             </div>
             <div class="plugin-main">
                 <div class="plugin-nav">
-                    <sp-sidenav class="plugin-sidenav" defaultValue="editor">
+                    <sp-sidenav class="plugin-sidenav" defaultValue="builder">
                         <sp-sidenav-item value="build" label="Build Assistant" selected>
                             <sp-icon-magic-wand slot="icon"></sp-icon-magic-wand>
                         </sp-sidenav-item>
@@ -39,7 +39,7 @@
                         </sp-sidenav-item>
                     </sp-sidenav>
                 </div>
-                <div class="plugin-content plugin-flex plugin-flex--column" data-active-menu="editor">
+                <div class="plugin-content plugin-flex plugin-flex--column" data-active-menu="build">
                     <div class="plugin-menu plugin-menu--build plugin-flex--flex-column" id="build-menu">
                         <div class="plugin-step-section">
                             <div class="plugin-progress-component">
@@ -171,7 +171,7 @@
                         </div>
                         <div class="plugin-menu-section" style="min-width: 250px">
                             <div class="plugin-control-cluster">
-                                <h4 class="plugin-label" style="margin-bottom: 0.5rem">Layer Selection Shortcuts</h4>
+                                <h4 class="plugin-label" style="margin-bottom: 0.5rem">Selection Tools</h4>
 
                                 <sp-button-group style="display: flex; align-items: center; align-content: center;">
                                     <!-- <sp-switch class=" autolink-toggle" style="margin-right: 2rem"
@@ -182,6 +182,11 @@
                                     <sp-action-button emphasized variant="secondary" treatment="outline" id="btnSelect">
                                         <sp-icon-layers slot="icon"></sp-icon-layers>
                                         Select Layers by Name
+                                    </sp-action-button>
+                                    <sp-action-button emphasized variant="secondary" treatment="outline"
+                                        id="btnSelectAll">
+                                        <sp-icon-layers slot="icon"></sp-icon-layers>
+                                        Select All Layers
                                     </sp-action-button>
                                     <!-- <sp-button variant="secondary" treatment="outline" id="btnLink">
                                         <sp-icon-link slot="icon"></sp-icon-link>
@@ -196,7 +201,7 @@
                         </div>
                         <div class="plugin-menu-section">
                             <div class="plugin-control-cluster">
-                                <h4 class="plugin-label" style="margin-bottom: 0.5rem">Asset Action</h4>
+                                <h4 class="plugin-label" style="margin-bottom: 0.5rem">Layer Actions</h4>
                                 <sp-button-group>
                                     <sp-action-button emphasized variant="secondary" treatment="outline"
                                         id="btnDuplicate">
@@ -207,6 +212,11 @@
                                         id="btnMissing">
                                         <sp-icon-wrench slot="icon"></sp-icon-wrench>
                                         Fill Missing Asset(s)
+                                    </sp-action-button>
+                                    <sp-action-button emphasized variant="secondary" treatment="outline"
+                                        id="btnMatchStyle">
+                                        <sp-icon-wrench slot="icon"></sp-icon-wrench>
+                                        Match Styles By Name
                                     </sp-action-button>
                                     <!-- <sp-button variant="secondary" treatment="outline" id="btnDelete">
                                     <sp-icon-delete slot="icon"></sp-icon-delete>
@@ -281,25 +291,36 @@
                     <sp-icon-layers slot="icon"></sp-icon-layers>
                     Select All Layers ${Name}
                 </sp-action-button> -->
-                <sp-action-button slot="buttons" id="btnLink" label="Link">
+                <sp-action-button slot="buttons" id="btnLink" class="action-bar-btn --layers" label="Link">
                     <sp-icon-link slot="icon"></sp-icon-link>
                     Link
                 </sp-action-button>
-                <sp-action-button slot="buttons" id="btnUnlink" label="Unlink">
+                <sp-action-button slot="buttons" id="btnUnlink" class="action-bar-btn --layers" label="Unlink">
                     <sp-icon-unlink slot="icon"></sp-icon-unlink>
                     Unlink
                 </sp-action-button>
-                <sp-action-button slot="buttons" id="btnScale" label="Scale">
+                <sp-action-button slot="buttons" id="btnScale" class="action-bar-btn --layers" label="Scale">
                     <sp-icon-maximize slot="icon"></sp-icon-maximize>
                     Scale
                 </sp-action-button>
-                <sp-action-button slot="buttons" id="btnRotate" label="Rotate">
+                <sp-action-button slot="buttons" id="btnRotate" class="action-bar-btn --layers" label="Rotate">
                     <sp-icon-rotate-c-w slot="icon"></sp-icon-rotate-c-w>
                     Rotate
                 </sp-action-button>
-                <sp-action-button slot="buttons" id="btnDeleteSelected" label="Delete Selected">
+                <sp-action-button slot="buttons" id="btnDeleteSelected" class="action-bar-btn --layers --artboards"
+                    label="Delete Selected">
                     <sp-icon-delete slot="icon"></sp-icon-delete>
                     Delete
+                </sp-action-button>
+                <sp-action-button slot="buttons" id="btnClonePrev" class="action-bar-btn --artboards"
+                    label="Clone & Decrement">
+                    <sp-icon-add slot="icon"></sp-icon-add>
+                    Clone & Decrement
+                </sp-action-button>
+                <sp-action-button slot="buttons" id="btnCloneNext" class="action-bar-btn --artboards"
+                    label="Clone & Increment">
+                    <sp-icon-add slot="icon"></sp-icon-add>
+                    Clone & Increment
                 </sp-action-button>
             </sp-action-bar>
         </div>

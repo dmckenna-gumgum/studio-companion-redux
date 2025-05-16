@@ -9,6 +9,8 @@ import { deleteSelectedLayers } from "./js/actions/deleteSelectedLayers.js";
 import { SelectListener } from "./js/actions/SelectListener.js";
 import { createLogger } from './js/helpers/logger.js';
 import { linkSelectedLayers } from './js/actions/linkSelectedLayers.js';
+import { matchStylesByName } from './js/actions/matchStylesByName.js';
+import { addBoardInSequence } from './js/actions/addBoardInSequence.js';
 
 const { core, constants } = require("photoshop");
 const { LayerKind } = constants;
@@ -139,6 +141,9 @@ const Editor = (() => {
 
     const toggleActionBar = async (selection = null) => {
         try {
+
+
+            let feedbackMessage = '';
             // logger.info('toggleActionBar', selection);
             if (!selection || selection.layers.length === 0) return state.actionBar.element.removeAttribute('open');
             state.actionBar.element.setAttribute('open', true);
@@ -147,15 +152,24 @@ const Editor = (() => {
                 state.actionBar.element.classList.replace('selection-many-groups', 'selection-same-groups') :
                 state.actionBar.element.classList.replace('selection-same-groups', 'selection-many-groups');
 
-            let feedbackMessage;
-            if (!selection.viable) {
-                feedbackMessage = `You've currently selected an artboard, or a mix of artboards and layers. Performing bulk actions on artboards is not supported`;
-                state.actionBar.element.classList.add('mixed-selection');
-            } else {
+            console.log('TYPE!!!!!!!!!!', selection.type);
+            if (selection.type === 'group') {
+                feedbackMessage = `<span class='plugin-action-bar-pill'>${selection.layers.length} Artboard${selection.layers.length === 1 ? '' : 's'}</span> selected`;
+                state.actionBar.element.classList.remove('mixed-selection');
+                state.actionBar.element.classList.add('group-selection');
+            }
+            if (selection.type === 'layer') {
                 feedbackMessage = `<span class='plugin-action-bar-pill'>${selection.layers.length} Layer${selection.layers.length === 1 ? '' : 's'}</span> selected ${selection.parentGroupCount.size === 1 ? ('In The <span class="plugin-action-bar-pill">Same Artboard</span>') : (`Across <span class='plugin-action-bar-pill'>${selection.parentGroupCount.size} Artboards</span>`)}`;
                 state.actionBar.element.classList.remove('mixed-selection');
+                state.actionBar.element.classList.remove('group-selection');
+            }
+            if (selection.type === 'mixed') {
+                feedbackMessage = `You've currently selected an artboard, or a mix of artboards and layers. Performing bulk actions on artboards is not supported`;
+                state.actionBar.element.classList.add('mixed-selection');
+                state.actionBar.element.classList.remove('group-selection');
             }
             state.actionBar.feedbackElement.innerHTML = feedbackMessage;
+
             return { name: 'toggleActionBar', success: true, message: 'Action bar toggled successfully' }
         } catch (err) {
             return { name: 'toggleActionBar', success: false, message: err.message }
@@ -329,6 +343,33 @@ const Editor = (() => {
                 action: deleteSelectedLayers,
                 buttonId: 'btnDeleteSelected',
                 buttonElement: document.querySelector('#btnDeleteSelected'),
+                options: [],
+                callback: null
+            },
+            {
+                description: "Match Styles By Name",
+                name: "MatchStyleByName",
+                action: matchStylesByName,
+                buttonId: 'btnMatchStyle',
+                buttonElement: document.querySelector('#btnMatchStyle'),
+                options: [],
+                callback: null
+            },
+            {
+                description: "Clone to Next",
+                name: "AddBoardInSequence",
+                action: addBoardInSequence,
+                buttonId: 'btnCloneNext',
+                buttonElement: document.querySelector('#btnCloneNext'),
+                options: [],
+                callback: null
+            },
+            {
+                description: "Clone to Previous",
+                name: "AddBoardInSequence",
+                action: addBoardInSequence,
+                buttonId: 'btnClonePrev',
+                buttonElement: document.querySelector('#btnClonePrev'),
                 options: [],
                 callback: null
             }

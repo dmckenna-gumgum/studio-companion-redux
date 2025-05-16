@@ -123,6 +123,11 @@ sp-action-bar.selection-same-groups {
   --spectrum-actionbar-popover-border-color: var(--spectrum-celery-background-color-default);
 }
 
+sp-action-bar.group-selection {
+  --spectrum-actionbar-popover-background-color: var(--spectrum-purple-500);
+  --spectrum-actionbar-popover-border-color: var(--spectrum-purple-background-color-default);
+}
+
 sp-action-bar.mixed-selection {
   --spectrum-actionbar-popover-background-color: var(--spectrum-red-background-color-default);
   --spectrum-actionbar-popover-border-color: var(--spectrum-red-background-color-default);
@@ -142,6 +147,11 @@ sp-action-bar.selection-same-groups sp-action-button {
   --spectrum-actionbutton-background-color-down: var(--spectrum-celery-400);
 }
 
+sp-action-bar.group-selection sp-action-button {
+  --spectrum-actionbutton-background-color-hover: var(--spectrum-purple-700);
+  --spectrum-actionbutton-background-color-down: var(--spectrum-purple-400);
+}
+
 .plugin-control-cluster sp-action-button {
   --spectrum-actionbutton-background-color-default: var(--uxp-host-background-color);
   --spectrum-actionbutton-background-color-hover: var(--uxp-host-background-color);
@@ -149,6 +159,10 @@ sp-action-bar.selection-same-groups sp-action-button {
   --spectrum-actionbutton-background-color-active: var(--uxp-host-background-color);
   margin: 0.25rem 0.5rem 0.25rem 0;
   position: relative;
+}
+
+.action-bar-btn {
+  display: none;
 }
 
 .plugin-control-cluster sp-action-button#btnAutoLink {
@@ -178,6 +192,34 @@ sp-action-bar.selection-same-groups .plugin-action-bar-pill {
   background-color: var(--spectrum-celery-300);
 }
 
+sp-action-bar.group-selection .plugin-action-bar-pill {
+  background-color: var(--spectrum-purple-300);
+}
+
+.--layers,
+.--artboards {
+  display: none;
+}
+
+sp-action-bar.selection-many-groups .--layers,
+sp-action-bar.selection-same-groups .--layers {
+  display: flex;
+}
+
+sp-action-bar.selection-many-groups .--artboards,
+sp-action-bar.selection-same-groups .--artboards {
+  display: none;
+}
+
+sp-action-bar.selection-many-groups.group-selection .--layers,
+sp-action-bar.selection-same-groups.group-selection .--layers {
+  display: none;
+}
+
+sp-action-bar.selection-many-groups.group-selection .--artboards,
+sp-action-bar.selection-same-groups.group-selection .--artboards {
+  display: flex;
+}
 
 .plugin-action-bar-feedback {
   display: flex;
