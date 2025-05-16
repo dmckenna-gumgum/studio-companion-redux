@@ -31,48 +31,8 @@ const Editor = (() => {
     }
 
     const setCurrentSelection = (selection) => {
-        /* // const _sel = { ...state.currentSelection };
-        // console.log('setting current selection', selection);
-        ///if empty selection reset to default
-        // logger.debug("(Editor) STARTING SET CURRENT", Date.now());
-
-        // if(selection.length === 0) {
-        // //     _sel.viable = true;
-        // //     _sel.identical = false;
-        // //     _sel.layers = [];
-        // //     _sel.sameGroup = true;
-        // //     state.currentSelection = _sel;
-        // //     // console.log('set select to empty, update state');
-        // //     return state.currentSelection;
-        // // }
-        // //check if the new selection is identical to the existing selection
-        // const isIdentical = proxyArraysEqual(selection, _sel.layers);
-
-
-        // //if selection is already set to identical to current selection, return current selection without processing further.
-        // const alreadyIdentical = isIdentical && _sel.identical;
-        // if(alreadyIdentical) return _sel;
-
-
-        //otherwise either set to identical, or update viability and layers. Then return the current selection
-        // _sel.identical = isIdentical; 
-        // if(_sel.identical) {
-        //     state.currentSelection = _sel;
-        //     // console.log('set select to identical, update state');
-        //     return state.currentSelection;
-        // } else {
-        //     _sel.viable = getSelectionViability(selection);
-        //     _sel.layers = selection;
-        //     _sel.parentGroupCount = parentGroupCount(selection);
-        //     state.currentSelection = _sel;
-        //     // console.log('selection changed, update state');
-        //     // logger.debug("(Editor) DONE SET CURRENT SELECTION", Date.now());
-        //     logger.debug('selection changed', state.currentSelection);
-        //     return state.currentSelection;
-        // }*/
         if (selection.identical && state.currentSelection.identical) return state.currentSelection;
-        state.currentSelection = { ...selection };
-        return state.currentSelection;
+        return state.currentSelection = { ...selection };
     }
 
     const updateEditor = (_extState) => {
@@ -109,21 +69,20 @@ const Editor = (() => {
             }
         }
         state.filterRegex = buildScopeRegex(state.scopeFilters);
-        console.log("(Editor) REGEX", state.scopeFilters, state.filterRegex);
         updateFilterUI(event, add);
-        const result = await state.selectListener.setSelectionFilters(state.filterRegex);
+        const result = state.selectListener.setSelectionFilters(state.filterRegex);
         console.log("(Editor) Selection filters updated", result);
-        return { ...state.scopeFilters, result: result };
+        return result;
     }
 
     const getFilters = () => {
         return state.filterRegex;
     }
     // --- Layer Selection Handlers --- 
-    const handleLayerSelect = async (selection = []) => {
-        const newSelection = await setCurrentSelection(selection);
-        toggleActionBar(newSelection);
-        // toggleButtons(newSelection.viable);
+    const handleLayerSelect = async (selection) => {
+        toggleActionBar(selection);
+        const newSelection = setCurrentSelection(selection);
+        console.log("(Editor) Selection changed", newSelection);
     }
 
     const updateFilterUI = (event, checked) => {
@@ -136,32 +95,6 @@ const Editor = (() => {
             state.filterFeedbackElement.classList.add('plugin-filter-note--restricted');
             state.filterFeedbackElement.textContent = 'Edits are currently restricted to selected filters';
         }
-        /*
-        const deviceFilters = state.scopeFilters.filter(f => f.type === 'device');
-        const stateFilters = state.scopeFilters.filter(f => f.type === 'state');
-        const deviceFilterContainer = state.filterTagContainers.device;
-        const stateFilterContainer = state.filterTagContainers.state;
-        deviceFilterContainer.innerHTML = '';
-        stateFilterContainer.innerHTML = '';
-        if(deviceFilters.length === 0) {
-            const tag = createTag('device', 'All Devices');
-            deviceFilterContainer.appendChild(tag);
-        } else {
-            deviceFilters.forEach(f => {
-                const tag = createTag(f.type, f.name);
-                deviceFilterContainer.appendChild(tag);
-            });
-        }
-        if(stateFilters.length === 0) {
-            const tag = createTag('state', 'All Sequences');
-            stateFilterContainer.appendChild(tag);
-        } else {            
-            stateFilters.forEach(f => {
-                const tag = createTag(f.type, f.name);
-                stateFilterContainer.appendChild(tag);
-            });
-        }
-        */
     }
 
     const createTag = (type, name) => {
@@ -206,7 +139,7 @@ const Editor = (() => {
 
     const toggleActionBar = async (selection = null) => {
         try {
-            logger.info('toggleActionBar', selection);
+            // logger.info('toggleActionBar', selection);
             if (!selection || selection.layers.length === 0) return state.actionBar.element.removeAttribute('open');
             state.actionBar.element.setAttribute('open', true);
 

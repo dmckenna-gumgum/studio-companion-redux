@@ -203,7 +203,6 @@ function escapeRegex(s) {
  * @returns {RegExp}
  */
 function buildScopeRegex(scopeFilters) {
-  console.log('scopeFilters', scopeFilters);
   // only keep filters that are truthy/active
   const active = scopeFilters.filter(f =>
     f.active === undefined     // no active flag means include
@@ -235,7 +234,6 @@ function buildScopeRegex(scopeFilters) {
 
   // ^... ensures we apply all lookaheads, and then allow any characters
   const pattern = `^${lookaheads.join('')}.*$`;
-  console.log('pattern', pattern);
   return new RegExp(pattern);
 }
 
