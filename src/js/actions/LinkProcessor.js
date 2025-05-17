@@ -3,40 +3,8 @@ import { findValidGroups, toggleHistory, findGroupsWithFailures, collectAllLayer
 const { app, action, core } = require("photoshop");
 const { batchPlay } = action;
 
-
-
-/* toyed with applying layer styles to designate linked layers but it risks overwriting designers' actual layer styles in the process.
-const applyLinkStyle = async (layers) => {
-    const commands = layers.map(layer => ({
-        _obj: "set",
-        _target: [
-            { _ref: "property", _property: "layerEffects" },
-            { _ref: "layer", _id: layer.id }
-        ],
-        to: {
-            _obj: "layerEffects",
-            scale: { _unit: "percentUnit", _value: 100 },
-            solidFill: {
-                _obj: "solidFill",
-                enabled: true,
-                present: true,
-                showInDialog: false,
-                mode: { _enum: "blendMode", _value: "colorOverlay" },
-                opacity: { _unit: "percentUnit", _value: 50 },
-                color: {
-                    _obj: "RGBColor",
-                    red: 255,
-                    green: 0,
-                    blue: 0
-                }
-            }
-        }
-    }));
-    console.log('layer style command: ', commands);
-    await batchPlay(commands, { synchronousExecution: false });
-}
-
-
+import store from '../../store/index.js';
+import { linkLayers, unlinkLayers } from '../../store/actions/editorActions.js';
 
 /**
  * Unlink every layer whose name is in `deselectNames`
@@ -78,40 +46,6 @@ const processLinkLayers = async (selectNames, validBoards) => {
     }
 }
 
-//ALTERNATIVE SOLUTION THAT CHATGPT SUGGESTED BUT IS JUST A LESS PERFORMANT VERSION OF THE CURRENT APPROACH.
-// /**
-//  * *
-//  * @param {string[]} selectNames        – names you want linked together
-//  * @param {Layer[]}  validBoards        – groups / artboards to search in
-//  * @returns {Promise<{linked: {id,name,artboard}[]}>}
-//  */
-// const processLinkLayers = async (selectNames, validBoards) => {
-//     // Gather matching layers in the valid boards
-//     const layersToLink = getLayersByName(selectNames, validBoards);
-//     if (!layersToLink.length) return { linked: [] };      // nothing to do
-
-//     const anchor = layersToLink[0];                      // first match = pivot
-//     const linkResults = [];
-
-//     /* ---------- PASS 1: unlink everyone (anchor last) ---------- */
-//     for (const layer of layersToLink) {
-//         if (layer !== anchor) await layer.unlink();        // break old chains
-//     }
-//     await anchor.unlink();                               // ensure anchor solo
-
-//     /* ---------- PASS 2: link everyone to the anchor ----------- */
-//     for (const layer of layersToLink) {
-//         if (layer !== anchor) await layer.link(anchor);    // attach to anchor
-
-//         linkResults.push({
-//             id: layer.id,
-//             name: layer.name,
-//             artboard: layer.parent.name
-//         });
-//     }
-
-//     return { linked: linkResults };
-// };
 
 const UnlinkAllLayers = async (layers) => {
     const namesToUnlink = layers.map(l => l.name);
@@ -134,17 +68,37 @@ const UnlinkAllLayers = async (layers) => {
 }
 
 
+// New Redux-connected functions
+export const linkSelectedLayersRedux = () => {
+    const state = store.getState();
+    const layers = state.editor.currentSelection.layers;
+
+    if (layers.length > 0) {
+        store.dispatch(linkLayers(layers));
+    }
+};
+
+export const unlinkSelectedLayersRedux = () => {
+    const state = store.getState();
+    const layers = state.editor.currentSelection.layers;
+
+    if (layers.length > 0) {
+        store.dispatch(unlinkLayers(layers));
+    }
+};
+
+
 /**
  * Link/unlink all layers by matching names.
- *-
- * 1. Unlink any layer named in `deselectLayers` that isn’t also in `selectLayers`  
+ *
+ * 1. Unlink any layer named in `deselectLayers` that isn't also in `selectLayers`  
  * 2. Once that finishes, link every layer named in `selectLayers`
  *
  * @param {Layer[]} selectLayers   – layers whose names you want linked
  * @param {Layer[]} deselectLayers – layers whose names you want unlinked
  * @returns {Promise<{ unlinked: number, linked: number }>}
  */
-const LinkByArrayOfLayers = async (toLink, toUnlink, toUnchange, filters = null) => {
+export const LinkByArrayOfLayers = async (toLink, toUnlink, toUnchange, filters = null) => {
     const result = await core.executeAsModal(async (executionContext) => {
         try {
             // console.log("Linking layers active");
@@ -192,4 +146,4 @@ const LinkByArrayOfLayers = async (toLink, toUnlink, toUnchange, filters = null)
     return result;
 }
 
-export { LinkByArrayOfLayers, UnlinkAllLayers };
+export { UnlinkAllLayers };

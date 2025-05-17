@@ -1,0 +1,55 @@
+/* 
+ * navigation.css
+ * Controls menu visibility based on selected navigation item
+ */
+
+/* Menu Visibility Rules - controlled by data-active-menu on container */
+.plugin-content[data-active-menu="build"] .plugin-menu:not(#build-menu) {
+  display: none !important;
+}
+
+.plugin-content[data-active-menu="editor"] .plugin-menu:not(#editor-menu) {
+  display: none !important;
+}
+
+.plugin-content[data-active-menu="production"] .plugin-menu:not(#production-menu) {
+  display: none !important;
+}
+
+/* Active menu display overrides */
+.plugin-content[data-active-menu="build"] #build-menu {
+  display: flex !important;
+}
+
+.plugin-content[data-active-menu="editor"] #editor-menu {
+  display: block !important;
+}
+
+.plugin-content[data-active-menu="production"] #production-menu {
+  display: block !important;
+}
+
+/* Visibility for active sections */
+[data-active="true"] {
+  display: block !important;
+}
+
+[data-active="false"] {
+  display: none !important;
+}
+
+/* Fix for editor menu display properties */
+#editor-menu {
+  display: flex;
+  flex-direction: column;
+}
+
+#editor-menu .plugin-menu-section {
+  margin-bottom: 1rem;
+}
+
+/* Ensure proper navigation state highlighting */
+sp-sidenav-item[selected] {
+  background-color: var(--spectrum-global-color-static-blue-600);
+  color: white;
+}

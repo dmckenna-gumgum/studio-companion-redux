@@ -127,9 +127,20 @@ const shared = (env) => {
     entry: {
       main: [
         path.resolve(__dirname, './polyfill-queueMicrotask.js'),
+        'focus-visible/dist/focus-visible.js',
         './src/index.js',
         './src/css/styles.css'
       ]
+    },
+    optimization: {
+      // Disable code splitting for better UXP compatibility
+      splitChunks: {
+        chunks: 'async', // Only split async chunks, keep sync chunks together
+        cacheGroups: {
+          defaultVendors: false, // Disable default vendor splitting
+          default: false // Disable default chunk splitting
+        }
+      }
     },
     devtool: "cheap-module-source-map",
     mode: ENV,

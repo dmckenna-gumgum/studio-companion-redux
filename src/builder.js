@@ -6,7 +6,405 @@ import { revealAndPropagateToRestState } from "./js/buildActions/revealAndPropag
 import { readyPositioningForIntros } from "./js/buildActions/readyPositioningForIntros.js";
 import { createLogger } from './js/helpers/logger.js';
 import History from './js/helpers/history.js';
-const { core } = require("photoshop");
+import { app, core } from "photoshop";
+
+// Redux imports
+import store from './store/index.js';
+import {
+    setBuildStep,
+    incrementStep,
+    decrementStep,
+    updateCreative,
+    addToHistory,
+    restoreHistoryState
+} from './store/actions/builderActions.js';
+import { executePhotoshopOperation } from './store/actions/photoshopActions.js';
+import { showNotification } from './store/actions/uiActions.js';
+
+// Initialize logger
+const logger = createLogger({ prefix: 'Builder', initialLevel: 'DEBUG' });
+
+/**
+ * Initialize the Builder module
+ * @param {Object} config - Configuration options
+ * @returns {Object} - Builder API
+ */
+export const init = async (config = {}) => {
+    logger.debug('Initializing Builder with Redux');
+    
+    // Initialize UI elements
+    setupUIEventListeners();
+    
+    // If a document is open, check for creative history
+    if (app.activeDocument) {
+        initHistory();
+    }
+    
+    // Subscribe to Redux store changes
+    const unsubscribe = store.subscribe(() => {
+        updateBuilderUI(store.getState().builder);
+    });
+    
+    // Initial UI update
+    updateBuilderUI(store.getState().builder);
+    
+    // Return API
+    return {
+        destroy: () => {
+            logger.debug('Destroying Builder');
+            unsubscribe();
+            // Clean up event listeners and resources
+        }
+    };
+};
+
+/**
+ * Set up event listeners for Builder UI elements
+ */
+function setupUIEventListeners() {
+    logger.debug('Setting up Builder UI event listeners');
+    
+    // Next step button
+    const nextBtn = getEl('#btnNext');
+    if (nextBtn) {
+        logger.debug('Found Next button, adding event listener');
+        nextBtn.addEventListener('click', () => {
+            logger.debug('Next button clicked');
+            store.dispatch(incrementStep());
+        });
+    } else {
+        logger.warn('Next button not found');
+    }
+    
+    // Previous step button
+    const prevBtn = getEl('#btnPrev');
+    if (prevBtn) {
+        logger.debug('Found Previous button, adding event listener');
+        prevBtn.addEventListener('click', () => {
+            logger.debug('Previous button clicked');
+            store.dispatch(decrementStep());
+        });
+    } else {
+        logger.warn('Previous button not found');
+    }
+    
+    // Add step button
+    const addStepBtn = getEl('#btnAddStep');
+    if (addStepBtn) {
+        addStepBtn.addEventListener('click', () => {
+            logger.debug('Add step button clicked');
+            // Here we would dispatch an action to add a custom step
+            store.dispatch(showNotification('Adding custom step functionality is coming soon!'));
+        });
+    }
+    
+    // History buttons container is set up dynamically in updateHistoryButtons
+}
+
+/**
+ * Update the Builder UI based on Redux state
+ * @param {Object} builderState - Builder state from Redux
+ */
+function updateBuilderUI(builderState) {
+    logger.debug('Updating Builder UI with state:', builderState);
+    
+    if (!builderState) {
+        logger.error('Builder state is undefined');
+        return;
+    }
+    
+    const { currentStep, buildSteps, creative, history } = builderState;
+    
+    // Skip UI updates if no build steps defined
+    if (!buildSteps || buildSteps.length === 0) {
+        logger.warn('No build steps available');
+        return;
+    }
+    
+    // Update step counter and description
+    const stepNumber = getEl('.plugin-step-number');
+    const stepName = getEl('.plugin-step-name');
+    const stepText = getEl('.plugin-step-text');
+    
+    if (stepNumber && currentStep !== undefined) {
+        stepNumber.textContent = `Step ${currentStep + 1}:`;
+    }
+    
+    // Update step name and description
+    const buildStep = buildSteps[currentStep];
+    if (buildStep) {
+        if (stepName) {
+            stepName.textContent = buildStep.name || 'Unknown Step';
+        }
+        
+        if (stepText) {
+            stepText.textContent = buildStep.description || '';
+        }
+        
+        // Update progress bar
+        const progressBar = getEl('.plugin-progress-bar-fill');
+        if (progressBar) {
+            const progressPercentage = ((currentStep + 1) / buildSteps.length) * 100;
+            progressBar.style.width = `${progressPercentage}%`;
+        }
+    }
+    
+    // Update history buttons
+    updateHistoryButtons(history);
+    
+    // Update nav buttons enabled/disabled state
+    const prevButton = getEl('#btnPrev');
+    const nextButton = getEl('#btnNext');
+    
+    if (prevButton) {
+        prevButton.disabled = currentStep <= 0;
+    }
+    
+    if (nextButton) {
+        nextButton.disabled = currentStep >= buildSteps.length - 1;
+    }
+}
+
+/**
+ * Update history buttons based on available history entries
+ * @param {Array} history - History entries from Redux state
+ */
+function updateHistoryButtons(history) {
+    const historyContainer = getEl('#buildHistoryButtons');
+    if (!historyContainer) return;
+    
+    // Clear existing buttons
+    historyContainer.innerHTML = '';
+    
+    if (!history || history.length === 0) {
+        // Hide history section if no history
+        const historySection = getEl('#buildHistory');
+        if (historySection) {
+            historySection.style.display = 'none';
+        }
+        return;
+    }
+    
+    // Show history section
+    const historySection = getEl('#buildHistory');
+    if (historySection) {
+        historySection.style.display = 'flex';
+    }
+    
+    // Add history buttons (limited to last 5 entries to avoid cluttering UI)
+    const entriesToShow = history.slice(-5);
+    
+    entriesToShow.forEach((entry, index) => {
+        const button = document.createElement('sp-button');
+        button.setAttribute('size', 's');
+        button.textContent = `${entry.stepNumber}`;
+        button.dataset.historyIndex = index;
+        
+        button.addEventListener('click', () => {
+            store.dispatch(restoreHistoryState(entry.historyIndex));
+        });
+        
+        historyContainer.appendChild(button);
+    });
+}
+
+/**
+ * Update the history UI based on available history items
+ * @param {Array} history - History items array
+ */
+function updateHistoryUI(history) {
+    const historyContainer = getEl('#historyContainer');
+    if (!historyContainer) return;
+    
+    // Clear existing history items
+    historyContainer.innerHTML = '';
+    
+    // Show/hide history container based on history availability
+    if (history && history.length > 0) {
+        historyContainer.style.display = 'block';
+        
+        // Create history item buttons
+        history.forEach((item, index) => {
+            const historyBtn = document.createElement('sp-button');
+            historyBtn.setAttribute('variant', 'secondary');
+            historyBtn.setAttribute('size', 'S');
+            historyBtn.setAttribute('data-snapshot', item.name);
+            historyBtn.setAttribute('data-step', item.step);
+            historyBtn.textContent = `Step ${item.step + 1}: ${item.name}`;
+            
+            historyBtn.addEventListener('click', () => {
+                handleHistoryRevert(index);
+            });
+            
+            historyContainer.appendChild(historyBtn);
+        });
+    } else {
+        historyContainer.style.display = 'none';
+    }
+}
+
+/**
+ * Handle history revert action
+ * @param {Number} historyIndex - Index of history item to revert to
+ */
+async function handleHistoryRevert(historyIndex) {
+    try {
+        // Dispatch action to revert to this history state
+        store.dispatch(restoreHistoryState(historyIndex));
+        
+        // Attempt to restore Photoshop document state
+        const history = store.getState().builder.history[historyIndex];
+        if (history) {
+            await History.restore(history.name);
+            
+            store.dispatch(showNotification(
+                `Reverted to Step ${history.step + 1}`, 
+                'success', 
+                3000
+            ));
+        }
+    } catch (error) {
+        logger.error('Error reverting to history state', error);
+        store.dispatch(showNotification(
+            `Error reverting to snapshot: ${error.message}`, 
+            'error', 
+            5000
+        ));
+    }
+}
+
+/**
+ * Initialize history from document snapshots
+ */
+async function initHistory() {
+    try {
+        const snapshots = await History.getAllSnapshots();
+        
+        if (snapshots && snapshots.length > 0) {
+            // For each snapshot, add to Redux store history
+            snapshots.forEach(snapshot => {
+                const { name, stepNumber, historyState } = snapshot;
+                
+                store.dispatch(addToHistory(
+                    name,
+                    parseInt(stepNumber, 10),
+                    historyState
+                ));
+            });
+            
+            logger.debug('History initialized with snapshots', snapshots.length);
+        } else {
+            logger.debug('No snapshots found');
+        }
+    } catch (error) {
+        logger.error('Error initializing history', error);
+    }
+}
+
+/**
+ * Save current document state to history
+ */
+async function saveSnapshot() {
+    try {
+        const currentStep = store.getState().builder.currentStep;
+        const snapshotName = `Step_${currentStep}`;
+        
+        // Create Photoshop snapshot
+        const historyState = await History.capture(snapshotName);
+        
+        // Add to Redux store
+        store.dispatch(addToHistory(
+            snapshotName,
+            currentStep,
+            historyState
+        ));
+        
+        logger.debug('Snapshot saved', snapshotName);
+        return true;
+    } catch (error) {
+        logger.error('Error saving snapshot', error);
+        store.dispatch(showNotification(
+            `Error saving snapshot: ${error.message}`, 
+            'error', 
+            5000
+        ));
+        return false;
+    }
+}
+
+/**
+ * Clear all snapshots from history
+ */
+async function clearSnapshots() {
+    try {
+        await History.clear();
+        // Create a new empty history array in Redux
+        store.dispatch({ type: 'CLEAR_HISTORY' });
+        
+        logger.debug('All snapshots cleared');
+        return true;
+    } catch (error) {
+        logger.error('Error clearing snapshots', error);
+        return false;
+    }
+}
+
+/**
+ * Execute a build step action
+ * @param {Object} action - The action to execute
+ * @param {Object} state - Current state to pass to the action
+ * @returns {Array} - Array of result objects
+ */
+async function executeStepAction(action, state) {
+    const { functions = [] } = action;
+    
+    // If there are no functions, return a single "success" result
+    if (functions.length === 0) {
+        return [{ success: true, message: 'No functions to execute' }];
+    }
+    
+    // Execute each function in sequence, passing results to the next
+    const finalResults = await functions.reduce(
+        async (resultPromise, func) => {
+            const resultsSoFar = await resultPromise;
+            
+            try {
+                // Execute the function
+                const result = await func.doIt(func.options, state);
+                
+                // Add result to the list
+                return [...resultsSoFar, { 
+                    success: true, 
+                    message: `${func.id} completed successfully`, 
+                    payload: result 
+                }];
+            } catch (error) {
+                // Add error to the list
+                logger.error(`Function ${func.id} failed`, error);
+                return [...resultsSoFar, { 
+                    success: false, 
+                    message: error.message || `Function ${func.id} failed` 
+                }];
+            }
+        },
+        Promise.resolve([])  // initial "resultsSoFar" is []
+    );
+    
+    logger.debug('Build Action Results:', finalResults);
+    return finalResults;
+}
+
+// Export the Redux-integrated Builder module
+export default {
+    init,
+    saveSnapshot,
+    clearSnapshots,
+    executeStepAction,
+    updateBuilderUI,
+    handleHistoryRevert,
+    initHistory
+};
+/*
 let _onUpdateCallback = null;
 const Builder = (() => {
     const logger = createLogger({ prefix: 'Builder', initialLevel: 'DEBUG' });
@@ -128,40 +526,6 @@ const Builder = (() => {
         logger.log(`Build Action Results:`, finalResults);
         return finalResults;   // this is an array of all { success, message } objects
     }
-
-    /*  
-    async function executeStepAction(action, stateToPass) {
-        const {name, type, functions, description, device} = action;
-        // logger.debug(`DEBUG: On ${type === 'substep' ? 'Substep' : 'Step'}: ${action.step+1}. User click initiated: ${name}, which will: ${description}`);
-        try {
-            // logger.debug(`DEBUG: Action:`, action, creativeSection);
-            let results = [];
-            if (functions && functions.length > 0) {
-                // Execute each function sequentially using reduce to create a promise chain
-                // This ensures each function completes before starting the next one
-                return await functions.reduce(async (previousPromise, {doIt, options}) => {
-                    // Wait for the previous promise to complete
-                    await previousPromise;                
-                    // Then execute the current function
-                    const result = await doIt(action, stateToPass, options);
-                    logger.log(`Build Action Result: ${result.message}`);
-                    if (!result.success && result.message) {
-                        // logger.error(`Build Action ResultError: ${result.message}`);
-                        // await core.showAlert(result.message);
-                    }
-                    return result;
-                }, Promise.resolve()); // Start with a resolved promise
-            } else {
-                return { success: true, message: "No functions to execute." };
-            }
-        } catch (err) {
-            logger.error(`Error calling ${name} action:`, err);
-            const errorMessage = err.message || err.toString() || "Unknown error.";
-            await core.showAlert(`Error ${name}: ${errorMessage}`);
-            return [{ success: false, message: errorMessage }];
-        }    
-    }
-        */
 
     const updateArtboardState = (action, result) => {
         logger.log(`${action.name} Completed. Updating Creative State With:`, result.payload);
@@ -598,3 +962,4 @@ const Builder = (() => {
 })();
 
 export default Builder;
+*/

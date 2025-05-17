@@ -1,257 +1,257 @@
 const { app, action, constants } = require("photoshop");
 const { LayerKind } = constants;
 import { createLogger } from '../helpers/logger.js';
-import { LinkByArrayOfLayers, UnlinkAllLayers } from './LinkProcessor.js';
-import { sameIdSet, parentGroupCount, getSelectionViability, mergeUniqueById, diffArraysByIds } from "../helpers/utils.js";
+import store from '../../store/index.js';
+import { selectionChanged } from '../../store/actions/selectionActions.js';
 
 const logger = createLogger({ prefix: 'SelectListener', initialLevel: 'DEBUG' });
 
+/**
+ * SelectListener - Pure event system for Photoshop selection events
+ * 
+ * This module listens for Photoshop selection events and dispatches Redux actions
+ * when the selection changes. It no longer maintains its own state or does processing.
+ * 
+ * The complete flow is:
+ * 1. SelectListener detects Photoshop selection change
+ * 2. It dispatches SELECTION_CHANGED action with the raw layers
+ * 3. selectionMiddleware processes the selection data (viable, identical, etc.)
+ * 4. selectionMiddleware dispatches SELECTION_PROCESSED with complete data
+ * 5. UI components update based on Redux state changes
+ */
 const SelectListener = (() => {
-    // Private state
-    const _state = {
-        selection: {
-            layers: [],
-            type: 'layer',
-            viable: true,
-            identical: true,
-            sameGroup: true,
-            parentGroupCount: 0
-        },
-        enabled: false,
-        autoLink: false,
-        linkedLayers: [],
-        lastSelection: {
-            layers: [],
-            viable: true,
-            identical: true,
-            sameGroup: true,
-            parentGroupCount: 0
-        },
-        selectionPoll: null,
-        selectionFilters: null,
-        listener: null,
-        callback: null,
-        pollingRate: 100
-    };
+    // Private variables
+    let _enabled = false;
+    let _pollingId = null;
+    let _externalCallback = null; // For backward compatibility with the callback pattern
 
-    // Create state handler for proxy
-    const stateHandler = {
-        set(target, property, value) {
-            const oldValue = target[property];
-            target[property] = value;
-            return true;
-        },
-        get(target, property) {
-            return target[property];
+    /**
+     * Handles selection change events from Photoshop
+     * @param {Event} event - Photoshop selection event
+     */
+    const selectHandler = (event) => {
+        if (_pollingId) {
+            clearTimeout(_pollingId);
+            _pollingId = null;
         }
-    };
-
-    // Create proxied state
-    const state = new Proxy(_state, stateHandler);
-
-    // Private methods for state changes
-    const _notifyStateChange = (property, oldValue, newValue) => {
-        logger.debug(`(SelectListener) State change: ${property}`, { oldValue, newValue });
-        // Additional notification logic can be added here
-    };
-
-    // Bind the selectHandler to preserve context
-    const selectHandler = async (event) => {
-        stopSelectionPoll();
-        state.selection.layers = app.activeDocument.activeLayers;
-        state.selection.identical = state.lastSelection.layers.length > 0 ? sameIdSet(state.selection.layers, state.lastSelection.layers) : false;
-        //return !state.selection.identical ?
-        return state.enabled ? await selectionProcessor(event, 'selectHandler') :
-            console.log("(SelectListener) Selection is disabled");
-    };
-
-    const create = () => {
-        action.addNotificationListener([{ event: "select" }], selectHandler);
-        return true;
-    };
-
-    const destroy = () => {
-        state.listener = null;
-        action.removeNotificationListener([{ event: "select" }], selectHandler);
-    };
-
-    const startSelectionPoll = () => {
-        state.selection.layers = app.activeDocument.activeLayers;
-        state.selection.identical = state.lastSelection.layers.length > 0 ? sameIdSet(state.selection.layers, state.lastSelection.layers) : true;
-        state.selection.identical === true ?
-            state.selectionPoll = setTimeout(startSelectionPoll, state.pollingRate) :
-            ///if they're not identical, process the selection
-            state.selectionPoll = setTimeout(() => { selectionProcessor('select', 'pollingCycle') }, state.pollingRate);
-    };
-
-    const stopSelectionPoll = () => {
-        clearTimeout(state.selectionPoll);
-    };
-
-    const setListening = async (enabled) => {
-        state.enabled = enabled;
-        if (state.enabled) {
-            const result = setAutoLink(false);
-            return { success: true, message: "(SelectListener) Listener enabled successfully", listening: state.enabled, listener: state.listener, autoLinkStatus: result };
-        } else {
-            stopSelectionPoll();
-            setAutoLink(false);
-            return { success: true, message: "(SelectListener) Listener disabled successfully", listening: state.enabled, listener: state.listener, autoLinkStatus: true };
+        
+        if (!_enabled) {
+            logger.debug("(SelectListener) Selection is disabled");
+            return;
         }
-    };
-
-    const startAutoLink = async () => {
-        if (state.autoLink !== true) {
-            stopSelectionPoll();
-            state.autoLink = true;
-            state.selection.identical = false;
-            state.enabled && await selectionProcessor('select', 'autolinkEnabled');
-            return { success: true, message: "(SelectListener) AutoLink started successfully" };
-        } else {
-            return { success: true, message: "(SelectListener) AutoLink was already started" };
-        }
-    };
-
-    const stopAutoLink = async () => {
-        if (state.autoLink !== false) {
-            state.autoLink = false;
-            // state.enabled && await selectionProcessor('select', 'autolinkDisabled');
-            const unlinkResult = UnlinkAllLayers(state.lastSelection.layers);
-            return { success: true, message: "(SelectListener) AutoLink stopped successfully", unlinkResult: unlinkResult };
-        } else {
-            return { success: true, message: "(SelectListener) AutoLink was already stopped" };
-        }
-    };
-
-    const setAutoLink = (autoLink) => {
-        state.selection.layers = app.activeDocument.activeLayers;
-        if (autoLink !== state.autoLink) {
-            return autoLink ? startAutoLink() : stopAutoLink();
-        } else {
-            return { success: true, message: "(SelectListener) AutoLink state is already set to " + autoLink };
-        }
-    };
-
-    ///for some reason selectedFilters keeps reseting.
-    const setSelectionFilters = (filters) => {
-        // console.log("!Setting selection filters to", filters);
-        stopSelectionPoll();
-        state.selectionFilters = filters;
-        state.selection.identical = false;
-        ///i know this is async, but i don't want to wait for it to finish and the editor.js doesn't need that info anyway.
-        state.enabled && state.autoLink && selectionProcessor('select', 'filterChange');
-        return { success: true, message: `(SelectListener) Selection filters updated successfully: ${state.selectionFilters}` };
-    };
-
-    const handleDeselect = async () => {
-        //no layers selected, reset selection state
-        state.selection = {
-            layers: [],
-            viable: true,
-            type: 'layer',
-            identical: false,
-            sameGroup: true,
-            parentGroupCount: 0
-        };
-        state.callback?.(state.selection);
-        stopSelectionPoll();
+        
         try {
-            const unlinkResult = state.autoLink ? await UnlinkAllLayers(state.lastSelection.layers) : false;
-            console.log("(SelectListener) Unlink Result:", unlinkResult);
-            state.lastSelection = { ...state.selection };
-            return { success: true, message: "(SelectListener) All layers unlinked and selection reset" };
-        } catch (error) {
-            console.error("(SelectListener) Error unlinking layers:", error);
-            return { success: false, message: error.message };
-        }
-    }
-
-    const handleSelectionFeedback = () => {
-
-        return state.callback?.(state.selection);
-    }
-
-    const selectionProcessor = async (event, trigger = 'selectHandler') => {
-        console.log("\n\n\n");
-        console.log("(SelectListener) Selection Processor Triggered by: ", trigger);
-        if (state.selection.layers.length === 0) {
-            handleDeselect();
-        } else {
-            try {
-                const { viable, type } = getSelectionViability(state.selection.layers);
-                state.selection.viable = viable;
-                state.selection.type = type;
-                state.selection.parentGroupCount = parentGroupCount(state.selection.layers);
-                //state.selection.identical = state.lastSelection.layers.length > 0 ? sameIdSet(state.selection.layers, state.lastSelection.layers) : true;
-                handleSelectionFeedback();
-                ///if autolink is on and selectiopn is viable.
-                if (state.autoLink && state.selection.viable) {
-                    try {
-                        const { onlyA: newLayers, onlyB: unselectedLayers, both: existingLayers } = trigger !== 'filterChange' && trigger != 'autolinkEnabled' ?
-                            diffArraysByIds(state.selection.layers, state.lastSelection.layers) :
-                            { onlyA: [], onlyB: [], both: state.selection.layers };
-                        // console.log("\n\n\n");
-                        // console.log("(SelectListener) Selection Processor Triggered by: ", trigger);
-                        // console.log("(SelectListener) New Layers:", newLayers);
-                        // console.log("(SelectListener) Unselected Layers:", unselectedLayers);
-                        // console.log("(SelectListener) Existing Layers:", existingLayers);
-                        // console.log("\n\n\n");
-                        ///don't engage in autolinking if the feature is disabled, or if the selection has artboards and layers in it//
-                        const linkResult = await LinkByArrayOfLayers(newLayers, unselectedLayers, existingLayers, state.selectionFilters);
-                        state.lastSelection = { ...state.selection };
-                        startSelectionPoll();
-                        const result = { success: true, message: "(SelectListener) Selection changed successfully", result: linkResult };
-                        console.log("(SelectListener) Selection Processor Result:", result);
-                        return result;
-                    } catch (error) {
-                        startSelectionPoll();
-                        const result = { success: false, message: error.message };
-                        console.log("(SelectListener) Selection Processor Error:", result);
-                        return result;
+            // Get current layers from Photoshop
+            const currentLayers = app.activeDocument.activeLayers || [];
+            
+            // Dispatch Redux action with selected layers
+            store.dispatch(selectionChanged(currentLayers));
+            
+            // For backward compatibility with callback pattern
+            if (_externalCallback && typeof _externalCallback === 'function') {
+                _externalCallback({
+                    type: 'editorStateUpdate',
+                    selection: {
+                        layers: currentLayers
                     }
-                } else {
-                    state.lastSelection = { ...state.selection };
-                    startSelectionPoll();
-                    return { success: true, message: "(SelectListener) Selection changed successfully" };
-                }
-            } catch (error) {
-                console.error("(SelectListener) Error processing selection:", error);
-                return { success: false, message: error.message };
+                });
             }
+            
+            logger.debug("(SelectListener) Selection changed", { layerCount: currentLayers.length });
+        } catch (error) {
+            logger.error("(SelectListener) Error handling selection change", error);
+        }
+    };
+    
+    /**
+     * Start polling for selection changes
+     * This is a backup mechanism since the Photoshop events can be unreliable
+     */
+    const startPolling = (interval = 100) => {
+        if (_pollingId) {
+            clearTimeout(_pollingId);
+        }
+        
+        try {
+            const currentLayers = app.activeDocument.activeLayers || [];
+            
+            // Check if we need to handle a selection change
+            if (_enabled && app.activeDocument) {
+                // Dispatch same action as the event handler would
+                selectHandler({ type: 'pollingCycle' });
+            }
+            
+            // Schedule next poll
+            _pollingId = setTimeout(() => startPolling(interval), interval);
+        } catch (error) {
+            logger.error("(SelectListener) Error in polling cycle", error);
+            _pollingId = setTimeout(() => startPolling(interval), interval);
+        }
+    };
+    
+    /**
+     * Stop selection polling
+     */
+    const stopPolling = () => {
+        if (_pollingId) {
+            clearTimeout(_pollingId);
+            _pollingId = null;
         }
     };
 
-    // Initialize the module with options
-    const initialize = (options = {}) => {
-        console.log('SelectListener initialized', options);
-        state.callback = options.callback || null;
-        state.enabled = options.enableListener || false;
-        state.autoLink = options.autoLink || false;
-        state.selectionFilters = options.selectionFilters || null;
-        state.listener = create();
+    /**
+     * Registers event listeners with Photoshop
+     * @returns {Boolean} - Success status
+     */
+    const create = () => {
+        try {
+            action.addNotificationListener([{ event: "select" }], selectHandler);
+            logger.debug("(SelectListener) Event listener registered");
+            return true;
+        } catch (error) {
+            logger.error("(SelectListener) Failed to register event listener", error);
+            return false;
+        }
+    };
 
+    /**
+     * Removes event listeners from Photoshop
+     */
+    const destroy = () => {
+        try {
+            stopPolling();
+            action.removeNotificationListener([{ event: "select" }], selectHandler);
+            logger.debug("(SelectListener) Event listener removed");
+        } catch (error) {
+            logger.error("(SelectListener) Failed to remove event listener", error);
+        }
+    };
+
+    /**
+     * Enable or disable the selection listener
+     * @param {Boolean} enabled - Whether to enable selection listening
+     * @returns {Object} - Status information
+     */
+    const setListening = (enabled) => {
+        _enabled = enabled;
+        
+        if (_enabled) {
+            // Check current selection when enabling
+            try {
+                if (app.activeDocument) {
+                    const currentLayers = app.activeDocument.activeLayers || [];
+                    if (currentLayers.length > 0) {
+                        // Dispatch current selection immediately
+                        store.dispatch(selectionChanged(currentLayers));
+                    }
+                }
+                
+                // Start polling as a backup mechanism
+                startPolling();
+                
+                return { 
+                    success: true, 
+                    message: "(SelectListener) Listener enabled successfully"
+                };
+            } catch (error) {
+                logger.error("(SelectListener) Error enabling listener", error);
+                return { 
+                    success: false, 
+                    message: `Error enabling listener: ${error.message}` 
+                };
+            }
+        } else {
+            // Stop polling when disabling
+            stopPolling();
+            return { 
+                success: true, 
+                message: "(SelectListener) Listener disabled successfully"
+            };
+        }
+    };
+    
+    /**
+     * Set filters for selection
+     * @param {RegExp|String} filters - Selection filters
+     * @returns {Object} - Status information
+     */
+    const setSelectionFilters = (filters) => {
+        // We don't manage filters directly anymore - Redux does
+        // Just dispatch an action to update the filters in Redux
+        store.dispatch({
+            type: 'SET_FILTER',
+            payload: filters
+        });
+        
+        return { 
+            success: true, 
+            message: "(SelectListener) Filters updated through Redux"
+        };
+    };
+    
+    /**
+     * Initialize the selection listener
+     * @param {Object} options - Configuration options
+     * @param {Function} options.callback - Optional callback for backward compatibility
+     * @param {Boolean} options.enableListener - Whether to enable listening immediately
+     * @param {Boolean} options.autoLink - Whether auto-link is enabled
+     * @param {RegExp|String} options.selectionFilters - Selection filters
+     * @returns {Object} - Public API for the listener
+     */
+    const initialize = (options = {}) => {
+        logger.debug('Initializing SelectListener', options);
+        
+        // Store callback for backward compatibility
+        _externalCallback = options.callback || null;
+        
+        // Register the event listener with Photoshop
+        create();
+        
+        // Set initial state through Redux actions instead of managing internally
+        if (options.enableListener) {
+            setListening(true);
+        }
+        
+        // Set auto-link through Redux
+        if (options.autoLink) {
+            store.dispatch({
+                type: 'TOGGLE_AUTO_LINK',
+                payload: true
+            });
+        }
+        
+        // Set filters through Redux
+        if (options.selectionFilters) {
+            store.dispatch({
+                type: 'SET_FILTER',
+                payload: options.selectionFilters
+            });
+        }
+        
+        // Return public API
         return {
-            getSelection: () => ({ ...state.selection }),
-            isEnabled: () => state.enabled,
-            isAutoLinkEnabled: () => state.autoLink,
+            // Methods for external use
             setListening,
-            setAutoLink,
+            destroy,
+            
+            // For compatibility with existing code
+            isEnabled: () => _enabled,
+            setAutoLink: (enabled) => {
+                store.dispatch({
+                    type: 'TOGGLE_AUTO_LINK',
+                    payload: enabled
+                });
+                return { success: true };
+            },
             setSelectionFilters
         };
     };
-
+    
     // Public API
     return {
         initialize,
         destroy,
-        startSelectionPoll,
-        stopSelectionPoll,
-        setListening,
-        startAutoLink,
-        stopAutoLink,
-        setAutoLink,
-        setSelectionFilters,
-        selectionProcessor
+        setListening
     };
 })();
 
